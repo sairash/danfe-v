@@ -17,6 +17,9 @@ pub mut:
 	value u8
 }
 
+// Comment Block
+pub struct Comment {}
+
 // End of line
 pub struct EOL {}
 
@@ -69,6 +72,7 @@ pub type TokenType = EOL
 	| Identifier
 	| Operator
 	| ReservedSymbol
+	| Comment
 
 pub struct Token {
 	pub mut:

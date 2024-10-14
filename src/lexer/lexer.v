@@ -31,14 +31,12 @@ pub fn (l &Lex) next() !token.Token {
 		}
 	}
 
-	cur_file_process.peek() or {
+	cur_file_process.skip_whitespace() or {
 		return token.Token{
 			token_type: token.EOF{}
 			range:      [cur_file_process.x]
 		}
 	}
-
-	cur_file_process.skip_whitespace()
 
 	next_char := cur_file_process.consume_char() or {
 		return token.Token{
@@ -57,8 +55,6 @@ pub fn (l &Lex) next() !token.Token {
 	return cur_file_process.change_to_token(next_char)!
 }
 
-
-
 // convert the given u8 to token type
 fn (mut p Process) change_to_token(next_char u8) !token.Token {
 	match next_char {
@@ -68,7 +64,31 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 				range:      [p.get_x()]
 			}
 		}
-		`a`...`z`,  `A`...`Z`{
+		`;`, `,` {
+			return token.Token{
+				token_type: token.Seperator{}
+				range:      [p.get_x()]
+			}
+		}
+		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>` {
+			return p.match_operators(next_char, p.get_x())
+		}
+		// `0`...`9` {
+		// 	return p.match_operators(next_char, p.get_x())
+		// }
+		`#` { // comment
+			for {
+				consume := p.consume_char() or { break }
+				if consume == `\n` {
+					break
+				}
+			}
+			return token.Token{
+				token_type: token.Comment{}
+				range:      [p.get_x()]
+			}
+		}
+		`a`...`z`, `A`...`Z` {
 			return p.match_identifier(next_char, p.get_x())
 		}
 		`'`, `"` {
@@ -96,8 +116,9 @@ pub fn (mut p Process) consume_char() ?u8 {
 }
 
 // skip all the whitespaces except \n
-fn (mut p Process) skip_whitespace() {
+fn (mut p Process) skip_whitespace() ? {
 	for {
+		p.peek() or { return none }
 		if p.file_data[p.x] == `\n` || !p.file_data[p.x].is_space() {
 			break
 		}

@@ -3,6 +3,43 @@ module lexer
 import token
 import grammer
 
+fn (mut p Process) match_operators(start u8, start_index i64) !token.Token {
+	mut return_operator := start.ascii_str()
+
+	peek := p.peek() or { return ErrorUnexpectedEOF{} }
+
+	if peek == `=` && (start == `+` || start == `-` || start == `=` || start == `>`
+		|| start == `<` || start == `%`) {
+		return_operator += peek.ascii_str()
+		p.consume_char()
+	} else if peek == `|` && start == `|` {
+		return_operator += peek.ascii_str()
+		p.consume_char()
+	} else if peek == `&` && start == `&` {
+		return_operator += peek.ascii_str()
+		p.consume_char()
+	} else if peek == `+` && start == `+` {
+		return_operator += peek.ascii_str()
+		p.consume_char()
+	} else if peek == `-` && start == `-` {
+		return_operator += peek.ascii_str()
+		p.consume_char()
+	}
+
+	defer {
+		unsafe {
+			free(return_operator)
+		}
+	}
+
+	return token.Token{
+		token_type: token.Operator{
+			value: return_operator
+		}
+		range:      [start_index, p.get_x()]
+	}
+}
+
 fn (p &Process) match_reserved_symbols(identifier string) token.Token {
 	if identifier in grammer.reserved_symbols {
 		return token.Token{
