@@ -28,6 +28,14 @@ fn (err ErrorUnexpectedToken) msg() string {
 	return "There was an unexpected token: ${err.token}"
 }
 
+struct ErrorUseOfMultipleFloatPoints implements IError {
+	Error
+}
+
+fn (err ErrorUseOfMultipleFloatPoints) msg() string {
+	return "Attempting the use of multiple floating points \".\" in number."
+}
+
 struct ErrorUnexpectedEOF implements IError {
 	Error
 }

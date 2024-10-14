@@ -73,9 +73,9 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>` {
 			return p.match_operators(next_char, p.get_x())
 		}
-		// `0`...`9` {
-		// 	return p.match_operators(next_char, p.get_x())
-		// }
+		`0`...`9` {
+			return p.match_number(next_char, p.get_x())
+		}
 		`#` { // comment
 			for {
 				consume := p.consume_char() or { break }
