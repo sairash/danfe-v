@@ -57,38 +57,7 @@ pub fn (l &Lex) next() !token.Token {
 	return cur_file_process.change_to_token(next_char)!
 }
 
-fn (mut p Process) match_identifier(first_char u8) !token.Token {
-	mut return_str := first_char.ascii_str()
-	start_index := p.get_x()
 
-	for {
-		peek := p.peek() or { break }
-
-		if peek.is_letter() || peek.is_digit() || peek == `_` {
-			return_str += peek.ascii_str()
-			unsafe {
-				free(peek)
-			}
-			p.consume_char()
-		} else {
-			break
-		}
-	}
-
-	defer {
-		unsafe {
-			free(return_str)
-			free(start_index)
-		}
-	}
-
-	return token.Token{
-		token_type: token.Identifier{
-			value: return_str
-		}
-		range:      [start_index, p.get_x()]
-	}
-}
 
 // convert the given u8 to token type
 fn (mut p Process) change_to_token(next_char u8) !token.Token {
@@ -99,11 +68,11 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 				range:      [p.get_x()]
 			}
 		}
-		`a`...`z` {
-			return p.match_identifier(next_char)
+		`a`...`z`,  `A`...`Z`{
+			return p.match_identifier(next_char, p.get_x())
 		}
-		`A`...`Z` {
-			return p.match_identifier(next_char)
+		`'`, `"` {
+			return p.match_string(next_char, p.get_x())
 		}
 		else {
 			return ErrorUnexpectedToken{
