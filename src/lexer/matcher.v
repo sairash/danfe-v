@@ -3,7 +3,7 @@ module lexer
 import token
 import grammer
 
-fn (p &Process) map_balance(c u8) ?u8 {
+fn (p &Process) map_balance(c u8) u8 {
 	match c {
 		`{` {
 			return 125 // }
@@ -24,7 +24,7 @@ fn (p &Process) map_balance(c u8) ?u8 {
 			return 91 // [
 		}
 		else {
-			return none
+			return 0 // default
 		}
 	}
 }
@@ -41,17 +41,9 @@ fn (mut p Process) match_punctuation(c u8, open bool) !token.Token {
 			}
 		}
 
-		if p.bracket_balance[len_brackets] != p.map_balance(c) or {
-			return ErrorUnexpectedToken{
-				token: c.ascii_str()
-			}
-		} {
+		if p.bracket_balance[len_brackets] != p.map_balance(c) {
 			return ErrorMissingExpectedSymbol{
-				expected: p.map_balance(p.bracket_balance[len_brackets]) or {
-					return ErrorUnexpectedToken{
-						token: c.ascii_str()
-					}
-				}.ascii_str()
+				expected: p.map_balance(p.bracket_balance[len_brackets]).ascii_str()
 				found:    c.ascii_str()
 			}
 		} else {
