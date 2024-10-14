@@ -13,7 +13,7 @@ pub mut:
 	processed       bool
 	return_path     string
 	file_path       string
-	bracket_balance map[u8]token.BalancingDepthType
+	bracket_balance []u8
 }
 
 pub struct Lex {
@@ -63,6 +63,12 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 				token_type: token.EOL{}
 				range:      [p.get_x()]
 			}
+		}
+		`(`, `[`, `{` {
+			return p.match_punctuation(next_char, true)
+		}
+		`)`, `]`, `}` {
+			return p.match_punctuation(next_char, false)
 		}
 		`;`, `,` {
 			return token.Token{
@@ -163,7 +169,7 @@ pub fn (mut l Lex) add_new_file_to_lex(path string, return_path string) ! {
 			file_len:        go_through_file_data.len
 			cur_col:         1
 			cur_line:        1
-			bracket_balance: {}
+			bracket_balance: []
 		}
 
 		unsafe {

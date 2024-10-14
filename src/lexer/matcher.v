@@ -3,6 +3,69 @@ module lexer
 import token
 import grammer
 
+fn (p &Process) map_balance(c u8) ?u8 {
+	match c {
+		`{` {
+			return 125 // }
+		}
+		`(` {
+			return 41 // )
+		}
+		`[` {
+			return 93 // ]
+		}
+		`}` {
+			return 123 // {
+		}
+		`)` {
+			return 40 // (
+		}
+		`]` {
+			return 91 // [
+		}
+		else {
+			return none
+		}
+	}
+}
+
+fn (mut p Process) match_punctuation(c u8, open bool) !token.Token {
+	if open {
+		p.bracket_balance << c
+	} else {
+		len_brackets := p.bracket_balance.len - 1
+
+		if len_brackets < 0 {
+			return ErrorUnexpectedToken{
+				token: c.ascii_str()
+			}
+		}
+
+		if p.bracket_balance[len_brackets] != p.map_balance(c) or {
+			return ErrorUnexpectedToken{
+				token: c.ascii_str()
+			}
+		} {
+			return ErrorMissingExpectedSymbol{
+				expected: p.map_balance(p.bracket_balance[len_brackets]) or {
+					return ErrorUnexpectedToken{
+						token: c.ascii_str()
+					}
+				}.ascii_str()
+				found:    c.ascii_str()
+			}
+		} else {
+			p.bracket_balance.pop()
+		}
+	}
+	return token.Token{
+		token_type: token.Punctuation{
+			open:  open
+			value: c
+		}
+	}
+}
+
 fn (mut p Process) match_number(start u8, start_index i64) !token.Token {
 	mut return_number := [start]
 	mut return_hint := token.NumericType.i64

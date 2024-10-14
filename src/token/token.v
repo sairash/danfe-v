@@ -6,9 +6,8 @@ pub type BalancingDepthType = i32
 // Punctuation for eg: { } [ ] ( )
 pub struct Punctuation {
 pub mut:
-	open    bool
-	balance BalancingDepthType
-	value   u8
+	open  bool
+	value u8
 }
 
 // Seperator for eg: , ;
@@ -75,7 +74,7 @@ pub type TokenType = EOL
 	| Comment
 
 pub struct Token {
-	pub mut:
+pub mut:
 	token_type TokenType
 	range      []i64
 }
