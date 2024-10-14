@@ -1,28 +1,77 @@
 module token
 
-pub enum TokenType as u8 {
-	let
-	int
-	float
-	string
-	identifier
-	boolean
-	operator
-	punctuation
-	seperator
-	comment
-	fi // else
-	ret // return
-	eol
-	eof
+// Balancing Depth for token
+pub type BalancingDepthType = i32
+
+// Punctuation for eg: { } [ ] ( )
+pub struct Punctuation {
+pub mut:
+	open    bool
+	balance BalancingDepthType
+	value   u8
 }
 
-pub type ExtraValue = string | int | f64 | f32 | u8 | rune 
+// Seperator for eg: , ;
+pub struct Seperator {
+pub mut:
+	value u8
+}
 
-pub struct Tokens {
-	type_of  TokenType
+// End of line
+pub struct EOL {}
+
+// End of file
+pub struct EOF {}
+
+// The only 2 types allowed in the language
+pub enum NumericType {
+	i64
+	f64
+}
+
+// Numbers frome 0 .. 9
+pub struct Numeric {
+pub mut:
 	value string
-	y int
-	extravalue ExtraValue
+	hint  NumericType
 }
 
+// String Type
+pub struct String {
+pub mut:
+	value string
+}
+
+// Sequence of characters to define value
+pub struct Identifier {
+pub mut:
+	value string
+}
+
+// Actions for eg: + - *
+pub struct Operator {
+pub mut:
+	value string
+}
+
+// for if else print and other symboles
+pub struct ReservedSymbol {
+pub mut:
+	value string
+}
+
+pub type TokenType = EOL
+	| EOF
+	| Punctuation
+	| Seperator
+	| Numeric
+	| String
+	| Identifier
+	| Operator
+	| ReservedSymbol
+
+pub struct Token {
+	pub mut:
+	token_type TokenType
+	range      []i64
+}
