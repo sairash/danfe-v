@@ -1,6 +1,25 @@
 module lexer
 
 import token
+import grammer
+
+fn (p &Process) match_reserved_symbols(identifier string) token.Token {
+	if identifier in grammer.reserved_symbols {
+		return token.Token{
+			token_type: token.ReservedSymbol{
+				value: identifier
+			}
+			range:      []
+		}
+	} else {
+		return token.Token{
+			token_type: token.Identifier{
+				value: identifier
+			}
+			range:      []
+		}
+	}
+}
 
 fn (mut p Process) match_string(start_symbol u8, start_index i64) !token.Token {
 	mut return_string := ''
@@ -62,10 +81,13 @@ fn (mut p Process) match_identifier(first_char u8, start_index i64) !token.Token
 		}
 	}
 
-	return token.Token{
-		token_type: token.Identifier{
-			value: return_str
+	mut new_token := p.match_reserved_symbols(return_str)
+	new_token.range = [start_index, p.get_x()]
+	defer {
+		unsafe {
+			free(new_token)
 		}
-		range:      [start_index, p.get_x()]
 	}
+
+	return new_token
 }
