@@ -39,10 +39,100 @@ fn test_identifier() {
 
 	match mut first_ident.token_type {
 		token.Identifier {
-			assert first_ident.token_type.value == "abcd1_2"
+			assert first_ident.token_type.value == 'abcd1_2'
 		}
 		else {
 			panic('Identifier mismatch')
+		}
+	}
+}
+
+fn test_string() {
+	path := './test_inputs/lexer_test/string.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.String {
+			assert first_ident.token_type.value == 'hello'
+		}
+		else {
+			panic('String mismatch')
+		}
+	}
+}
+
+fn test_symbol() {
+	path := './test_inputs/lexer_test/symbol.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.ReservedSymbol {
+			assert first_ident.token_type.value == 'if'
+		}
+		else {
+			panic('Symbol mismatch')
+		}
+	}
+}
+
+fn test_number() {
+	path := './test_inputs/lexer_test/number.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.Numeric {
+			assert first_ident.token_type.value == '1234'
+		}
+		else {
+			panic('Number mismatch')
+		}
+	}
+}
+
+fn test_operator() {
+	path := './test_inputs/lexer_test/operator.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.Operator {
+			assert first_ident.token_type.value == '+'
+		}
+		else {
+			panic('Operator mismatch')
+		}
+	}
+}
+
+fn test_punctuation() {
+	path := './test_inputs/lexer_test/punctuation.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.Punctuation {
+			assert first_ident.token_type.open == true
+			assert first_ident.token_type.value == '('
+		}
+		else {
+			panic('punctuation mismatch')
+		}
+	}
+}
+
+
+fn test_comment() {
+	path := './test_inputs/lexer_test/comment.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.Comment {}
+		else {
+			panic('Comment mismatch')
 		}
 	}
 }
