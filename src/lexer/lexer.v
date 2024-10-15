@@ -3,7 +3,7 @@ module lexer
 import os
 import token
 
-pub struct Process {
+pub struct Lex {
 pub mut:
 	x               i64
 	cur_line        int
@@ -16,91 +16,79 @@ pub mut:
 	bracket_balance []u8
 }
 
-pub struct Lex {
-pub mut:
-	file_process map[string]&Process
-	cur_file     string
-}
-
 const size = 1024 * 256
 
-pub fn (l &Lex) next() !token.Token {
-	mut cur_file_process := l.file_process[l.cur_file] or {
-		return ErrorFileIO{
-			path: l.cur_file
+pub fn (mut l Lex) next() !token.Token {
+	l.skip_whitespace() or {
+		return token.Token{
+			token_type: token.EOF{}
+			range:      [l.x]
 		}
 	}
 
-	cur_file_process.skip_whitespace() or {
+	next_char := l.consume_char() or {
 		return token.Token{
 			token_type: token.EOF{}
-			range:      [cur_file_process.x]
-		}
-	}
-
-	next_char := cur_file_process.consume_char() or {
-		return token.Token{
-			token_type: token.EOF{}
-			range:      [cur_file_process.x]
+			range:      [l.x]
 		}
 	}
 
 	defer {
 		unsafe {
-			free(cur_file_process)
+			free(l)
 			free(next_char)
 		}
 	}
 
-	return cur_file_process.change_to_token(next_char)!
+	return l.change_to_token(next_char)!
 }
 
 // convert the given u8 to token type
-fn (mut p Process) change_to_token(next_char u8) !token.Token {
+fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 	match next_char {
 		`\n` {
 			return token.Token{
 				token_type: token.EOL{}
-				range:      [p.get_x()]
+				range:      [l.get_x()]
 			}
 		}
 		`(`, `[`, `{` {
-			return p.match_punctuation(next_char, true)
+			return l.match_punctuation(next_char, true)
 		}
 		`)`, `]`, `}` {
-			return p.match_punctuation(next_char, false)
+			return l.match_punctuation(next_char, false)
 		}
 		`;`, `,` {
 			return token.Token{
 				token_type: token.Seperator{
 					value: next_char.ascii_str()
 				}
-				range:      [p.get_x()]
+				range:      [l.get_x()]
 			}
 		}
 		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^` {
-			return p.match_operators(next_char, p.get_x())
+			return l.match_operators(next_char, l.get_x())
 		}
 		`0`...`9` {
-			return p.match_number(next_char, p.get_x())
+			return l.match_number(next_char, l.get_x())
 		}
 		`#` { // comment
 			for {
-				consume := p.consume_char() or { break }
+				consume := l.consume_char() or { break }
 				if consume == `\n` {
 					break
 				}
 			}
 			return token.Token{
 				token_type: token.Comment{}
-				range:      [p.get_x()]
+				range:      [l.get_x()]
 			}
 		}
 		`a`...`z`, `A`...`Z`, `_` {
-			return p.match_identifier(next_char, p.get_x())
+			return l.match_identifier(next_char, l.get_x())
 		}
 		`'`, `"` {
-			return p.match_string(next_char, p.get_x())
+			return l.match_string(next_char, l.get_x())
 		}
 		else {
 			return ErrorUnexpectedToken{
@@ -111,37 +99,37 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 }
 
 // Consume the current character
-pub fn (mut p Process) consume_char() ?u8 {
-	peek := p.peek() or { return none }
+pub fn (mut l Lex) consume_char() ?u8 {
+	peek := l.peek()?
 	if peek == `\n` {
-		p.cur_col = 0
-		p.cur_line += 1
+		l.cur_col = 0
+		l.cur_line += 1
 	}
 
-	p.x += 1
-	p.cur_col += 1
+	l.x += 1
+	l.cur_col += 1
 	return peek
 }
 
 // skip all the whitespaces except \n
-fn (mut p Process) skip_whitespace() ? {
+fn (mut l Lex) skip_whitespace() ? {
 	for {
-		p.peek() or { return none }
-		if p.file_data[p.x] == `\n` || !p.file_data[p.x].is_space() {
+		l.peek()?
+		if l.file_data[l.x] == `\n` || !l.file_data[l.x].is_space() {
 			break
 		}
-		p.consume_char()
+		l.consume_char()
 	}
 }
 
-fn (p &Process) get_x() i64 {
-	return p.x - 1
+fn (l &Lex) get_x() i64 {
+	return l.x - 1
 }
 
 // Peek current character
-fn (p &Process) peek() ?u8 {
-	if p.x < p.file_len {
-		return p.file_data[p.x]
+fn (l &Lex) peek() ?u8 {
+	if l.x < l.file_len {
+		return l.file_data[l.x]
 	}
 
 	return none
@@ -150,7 +138,7 @@ fn (p &Process) peek() ?u8 {
 // go through a file
 fn Lex.go_through_file(path string) !string {
 	if os.is_file(path) == true {
-		return os.read_file(path) or { return err }
+		return os.read_file(path)!
 	}
 
 	return ErrorFileIO{
@@ -158,36 +146,23 @@ fn Lex.go_through_file(path string) !string {
 	}
 }
 
-// Adds new file in the process of lexer
-pub fn (mut l Lex) add_new_file_to_lex(path string, return_path string) ! {
-	if path !in l.file_process {
-		go_through_file_data := Lex.go_through_file(path)!
-		l.file_process[path] = &Process{
-			x:               0
-			file_data:       go_through_file_data
-			file_path:       path
-			return_path:     return_path
-			processed:       false
-			file_len:        go_through_file_data.len
-			cur_col:         1
-			cur_line:        1
-			bracket_balance: []
-		}
-
+// Lexer Initializer
+pub fn Lex.new(path string, return_path string) !Lex {
+	go_through_file_data := Lex.go_through_file(path)!
+	defer {
 		unsafe {
 			free(go_through_file_data)
 		}
 	}
-}
-
-// Lexer Initializer
-pub fn Lex.new(path string) !&Lex {
-	mut lex := &Lex{
-		cur_file:     path
-		file_process: {}
+	return Lex{
+		x:               0
+		file_data:       go_through_file_data
+		file_path:       path
+		return_path:     return_path
+		processed:       false
+		file_len:        go_through_file_data.len
+		cur_col:         1
+		cur_line:        1
+		bracket_balance: []
 	}
-
-	lex.add_new_file_to_lex(path, '')!
-
-	return lex
 }

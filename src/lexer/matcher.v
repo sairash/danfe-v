@@ -3,7 +3,7 @@ module lexer
 import token
 import grammer
 
-fn (p &Process) map_balance(c u8) u8 {
+fn (l &Lex) map_balance(c u8) u8 {
 	match c {
 		`{` {
 			return 125 // }
@@ -29,11 +29,11 @@ fn (p &Process) map_balance(c u8) u8 {
 	}
 }
 
-fn (mut p Process) match_punctuation(c u8, open bool) !token.Token {
+fn (mut l Lex) match_punctuation(c u8, open bool) !token.Token {
 	if open {
-		p.bracket_balance << c
+		l.bracket_balance << c
 	} else {
-		len_brackets := p.bracket_balance.len - 1
+		len_brackets := l.bracket_balance.len - 1
 
 		if len_brackets < 0 {
 			return ErrorUnexpectedToken{
@@ -41,13 +41,13 @@ fn (mut p Process) match_punctuation(c u8, open bool) !token.Token {
 			}
 		}
 
-		if p.bracket_balance[len_brackets] != p.map_balance(c) {
+		if l.bracket_balance[len_brackets] != l.map_balance(c) {
 			return ErrorMissingExpectedSymbol{
-				expected: p.map_balance(p.bracket_balance[len_brackets]).ascii_str()
+				expected: l.map_balance(l.bracket_balance[len_brackets]).ascii_str()
 				found:    c.ascii_str()
 			}
 		} else {
-			p.bracket_balance.pop()
+			l.bracket_balance.pop()
 		}
 	}
 	return token.Token{
@@ -58,15 +58,15 @@ fn (mut p Process) match_punctuation(c u8, open bool) !token.Token {
 	}
 }
 
-fn (mut p Process) match_number(start u8, start_index i64) !token.Token {
+fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 	mut return_number := start.ascii_str()
 	mut return_hint := token.NumericType.i64
 
 	for {
-		peek := p.peek() or { break }
+		peek := l.peek() or { break }
 		if peek.is_digit() {
 			return_number += peek.ascii_str()
-			p.consume_char()
+			l.consume_char()
 		} else if peek == `.` {
 			match return_hint {
 				.f64 {
@@ -75,11 +75,11 @@ fn (mut p Process) match_number(start u8, start_index i64) !token.Token {
 				else {
 					return_hint = token.NumericType.f64
 					return_number += peek.ascii_str()
-					p.consume_char()
+					l.consume_char()
 				}
 			}
 		} else if peek == `_` {
-			p.consume_char()
+			l.consume_char()
 		} else if peek.is_letter() {
 			return ErrorMissingExpectedSymbol{
 				expected: 'value of number type'
@@ -105,31 +105,31 @@ fn (mut p Process) match_number(start u8, start_index i64) !token.Token {
 			value: return_number
 			hint:  return_hint
 		}
-		range:      [start_index, p.get_x()]
+		range:      [start_index, l.get_x()]
 	}
 }
 
-fn (mut p Process) match_operators(start u8, start_index i64) !token.Token {
+fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	mut return_operator := start.ascii_str()
 
-	peek := p.peek() or { return ErrorUnexpectedEOF{} }
+	peek := l.peek() or { return ErrorUnexpectedEOF{} }
 
 	if peek == `=` && (start == `+` || start == `-` || start == `=` || start == `>`
 		|| start == `<` || start == `%`) {
 		return_operator += peek.ascii_str()
-		p.consume_char()
+		l.consume_char()
 	} else if peek == `|` && start == `|` {
 		return_operator += peek.ascii_str()
-		p.consume_char()
+		l.consume_char()
 	} else if peek == `&` && start == `&` {
 		return_operator += peek.ascii_str()
-		p.consume_char()
+		l.consume_char()
 	} else if peek == `+` && start == `+` {
 		return_operator += peek.ascii_str()
-		p.consume_char()
+		l.consume_char()
 	} else if peek == `-` && start == `-` {
 		return_operator += peek.ascii_str()
-		p.consume_char()
+		l.consume_char()
 	}
 
 	defer {
@@ -143,11 +143,11 @@ fn (mut p Process) match_operators(start u8, start_index i64) !token.Token {
 		token_type: token.Operator{
 			value: return_operator
 		}
-		range:      [start_index, p.get_x()]
+		range:      [start_index, l.get_x()]
 	}
 }
 
-fn (p &Process) match_reserved_symbols(identifier string) token.Token {
+fn (l &Lex) match_reserved_symbols(identifier string) token.Token {
 	if identifier in grammer.reserved_symbols {
 		return token.Token{
 			token_type: token.ReservedSymbol{
@@ -165,10 +165,10 @@ fn (p &Process) match_reserved_symbols(identifier string) token.Token {
 	}
 }
 
-fn (mut p Process) match_string(start_symbol u8, start_index i64) !token.Token {
+fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 	mut return_string := ''
 	for {
-		new_char := p.consume_char() or {
+		new_char := l.consume_char() or {
 			return ErrorMissingExpectedSymbol{
 				expected: start_symbol.ascii_str()
 				found:    'EOF'
@@ -181,7 +181,7 @@ fn (mut p Process) match_string(start_symbol u8, start_index i64) !token.Token {
 			}
 			break
 		} else if new_char == `\\` {
-			consume := p.consume_char() or {
+			consume := l.consume_char() or {
 				return ErrorMissingExpectedSymbol{
 					expected: start_symbol.ascii_str()
 					found:    'EOF'
@@ -197,19 +197,19 @@ fn (mut p Process) match_string(start_symbol u8, start_index i64) !token.Token {
 		token_type: token.String{
 			value: return_string
 		}
-		range:      [start_index + 1, p.get_x() - 1] // +1 to negate the extra starting " and - 1 to negate the extra ending "
+		range:      [start_index + 1, l.get_x() - 1] // +1 to negate the extra starting " and - 1 to negate the extra ending "
 	}
 }
 
-fn (mut p Process) match_identifier(first_char u8, start_index i64) !token.Token {
+fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 	mut return_str := first_char.ascii_str()
 
 	for {
-		peek := p.peek() or { break }
+		peek := l.peek() or { break }
 
 		if peek.is_letter() || peek.is_digit() || peek == `_` {
 			return_str += peek.ascii_str()
-			p.consume_char()
+			l.consume_char()
 		} else {
 			unsafe {
 				free(peek)
@@ -225,8 +225,8 @@ fn (mut p Process) match_identifier(first_char u8, start_index i64) !token.Token
 		}
 	}
 
-	mut new_token := p.match_reserved_symbols(return_str)
-	new_token.range = [start_index, p.get_x()]
+	mut new_token := l.match_reserved_symbols(return_str)
+	new_token.range = [start_index, l.get_x()]
 	defer {
 		unsafe {
 			free(new_token)
