@@ -1,5 +1,7 @@
 module lexer
 
+import token
+
 fn test_go_through_file() {
 	path := './test_inputs/lexer_test/test.df'
 	expected_output := '      \n      a\nb\nc\nd\ne\nf\ng\nh\ni\nj'
@@ -28,4 +30,19 @@ fn test_next() {
 	path := './test_inputs/lexer_test/test.df'
 	lex := Lex.new(path)!
 	assert lex.next()!.range[0] == 6
+}
+
+fn test_identifier() {
+	path := './test_inputs/lexer_test/identifier.df'
+	lex := Lex.new(path)!
+	mut first_ident := lex.next()!
+
+	match mut first_ident.token_type {
+		token.Identifier {
+			assert first_ident.token_type.value == "abcd1_2"
+		}
+		else {
+			panic('Identifier mismatch')
+		}
+	}
 }
