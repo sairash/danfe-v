@@ -78,3 +78,39 @@ pub mut:
 	token_type TokenType
 	range      []i64
 }
+
+
+pub fn (t Token) get_name() string {
+	match t.token_type {
+		EOF{
+			return "EOF"
+		}
+		EOL{
+			return "EOL"
+		}
+		Punctuation{
+			return "Punctuation (eg: {} or () or [])"
+		}
+		Seperator{
+			return "Seperator (eg: ; or ,)"
+		}
+		Comment{
+			return "Comment (eg: #)"
+		}
+		Numeric {
+			return "Number (eg: 0..9)"
+		}
+		String {
+			return "String (eg: \"\")"
+		}
+		Identifier {
+			return "Identifier"
+		}
+		Operator {
+			return "Operator (eg: + , - , * , /)"
+		}
+		ReservedSymbol {
+			return "ReservedSymbol (eg if)"
+		}
+	}
+}

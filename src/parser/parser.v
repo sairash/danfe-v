@@ -25,10 +25,14 @@ pub fn (mut p Process) next() ! {
 	p.lex.next()!
 }
 
-pub fn (p &Process) eat(expected token.Token) ! {
-	if p.next_token.token_type == expected.token_type {
-
+pub fn (mut p Process) eat(expected token.Token) ! {
+	if p.next_token.token_type != expected.token_type {
+		return errors_df.ErrorMismatch{
+			expected: expected.get_name()
+			found:    p.next_token.get_name()
+		}
 	}
+	p.next()!
 }
 
 pub fn (p &Process) check_token(expected token.Token) bool {
@@ -50,6 +54,7 @@ pub fn (mut p Parse) add_new_file_to_parse(path string, return_path string) ! {
 
 	curr := lex.next()!
 	next := lex.next()!
+
 	p.file_process[path] = &Process{
 		lex:           lex
 		current_token: curr
