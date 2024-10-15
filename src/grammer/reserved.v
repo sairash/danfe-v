@@ -10,4 +10,7 @@ pub const reserved_symbols = [
 	'break',
 	'print',
 	'input',
+	'nil',
+	'not',
+	'or',
 ]
