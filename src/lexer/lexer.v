@@ -72,11 +72,13 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 		}
 		`;`, `,` {
 			return token.Token{
-				token_type: token.Seperator{}
+				token_type: token.Seperator{
+					value: next_char.ascii_str()
+				}
 				range:      [p.get_x()]
 			}
 		}
-		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>` {
+		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^` {
 			return p.match_operators(next_char, p.get_x())
 		}
 		`0`...`9` {
@@ -94,7 +96,7 @@ fn (mut p Process) change_to_token(next_char u8) !token.Token {
 				range:      [p.get_x()]
 			}
 		}
-		`a`...`z`, `A`...`Z` {
+		`a`...`z`, `A`...`Z`, `_` {
 			return p.match_identifier(next_char, p.get_x())
 		}
 		`'`, `"` {

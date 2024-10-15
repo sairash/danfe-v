@@ -7,13 +7,13 @@ pub type BalancingDepthType = i32
 pub struct Punctuation {
 pub mut:
 	open  bool
-	value u8
+	value string
 }
 
 // Seperator for eg: , ;
 pub struct Seperator {
 pub mut:
-	value u8
+	value string
 }
 
 // Comment Block
