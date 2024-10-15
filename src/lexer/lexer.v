@@ -2,6 +2,7 @@ module lexer
 
 import os
 import token
+import errors_df
 
 pub struct Lex {
 pub mut:
@@ -91,7 +92,7 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 			return l.match_string(next_char, l.get_x())
 		}
 		else {
-			return ErrorUnexpectedToken{
+			return errors_df.ErrorUnexpectedToken{
 				token: next_char.ascii_str()
 			}
 		}
@@ -141,7 +142,7 @@ fn Lex.go_through_file(path string) !string {
 		return os.read_file(path)!
 	}
 
-	return ErrorFileIO{
+	return errors_df.ErrorFileIO{
 		path: path
 	}
 }

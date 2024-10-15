@@ -3,6 +3,7 @@ module parser
 import lexer
 import token
 import ast
+import errors_df
 
 struct Process {
 pub mut:
@@ -24,13 +25,19 @@ pub fn (mut p Process) next() ! {
 	p.lex.next()!
 }
 
-pub fn (p &Process) check_token(tok token.Token) bool {
-	return p.current_token.token_type == tok.token_type
+pub fn (p &Process) eat(expected token.Token) ! {
+	if p.next_token.token_type == expected.token_type {
+
+	}
+}
+
+pub fn (p &Process) check_token(expected token.Token) bool {
+	return p.current_token.token_type == expected.token_type
 }
 
 pub fn (mut p Parse) walk() ! {
 	for {
-		proc := p.file_process[p.cur_file] or { return ErrorUnexpected{} }
+		proc := p.file_process[p.cur_file] or { return errors_df.ErrorUnexpected{} }
 
 		if proc.check_token(token.Token{ token_type: token.EOF{} }) {
 			break

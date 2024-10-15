@@ -1,7 +1,8 @@
-module lexer
+module errors_df
 
-struct ErrorFileIO  implements IError {
+pub struct ErrorFileIO  implements IError {
 	Error
+	pub mut:
 	path string
 }
 
@@ -9,18 +10,20 @@ fn (err ErrorFileIO) msg() string {
 	return "Failed to open path: ${err.path}."
 }
 
-struct ErrorMissingExpectedSymbol implements IError {
+pub struct ErrorMismatch implements IError {
 	Error
+	pub mut:
 	expected string
 	found string 
 }
 
-fn (err ErrorMissingExpectedSymbol) msg() string {
+fn (err ErrorMismatch) msg() string {
 	return "Was expecting ${err.expected}, but found ${err.found}."
 }
 
-struct ErrorUnexpectedToken implements IError {
+pub struct ErrorUnexpectedToken implements IError {
 	Error
+	pub mut:
 	token string
 }
 
@@ -28,7 +31,7 @@ fn (err ErrorUnexpectedToken) msg() string {
 	return "There was an unexpected token: ${err.token}"
 }
 
-struct ErrorUseOfMultipleFloatPoints implements IError {
+pub struct ErrorUseOfMultipleFloatPoints implements IError {
 	Error
 }
 
@@ -36,10 +39,18 @@ fn (err ErrorUseOfMultipleFloatPoints) msg() string {
 	return "Attempting the use of multiple floating points \".\" in number."
 }
 
-struct ErrorUnexpectedEOF implements IError {
+pub struct ErrorUnexpectedEOF implements IError {
 	Error
 }
 
 fn (err ErrorUnexpectedEOF) msg() string {
 	return "Unexpected End of File"
+}
+
+pub struct ErrorUnexpected implements IError {
+	Error
+}
+
+fn (err ErrorUnexpected) msg() string {
+	return "Unexpected Error In the compiler. Raise an Issue in Github"
 }

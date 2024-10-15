@@ -2,6 +2,7 @@ module lexer
 
 import token
 import grammer
+import errors_df
 
 fn (l &Lex) map_balance(c u8) u8 {
 	match c {
@@ -36,13 +37,13 @@ fn (mut l Lex) match_punctuation(c u8, open bool) !token.Token {
 		len_brackets := l.bracket_balance.len - 1
 
 		if len_brackets < 0 {
-			return ErrorUnexpectedToken{
+			return errors_df.ErrorUnexpectedToken{
 				token: c.ascii_str()
 			}
 		}
 
 		if l.bracket_balance[len_brackets] != l.map_balance(c) {
-			return ErrorMissingExpectedSymbol{
+			return errors_df.ErrorMismatch{
 				expected: l.map_balance(l.bracket_balance[len_brackets]).ascii_str()
 				found:    c.ascii_str()
 			}
@@ -70,7 +71,7 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 		} else if peek == `.` {
 			match return_hint {
 				.f64 {
-					return ErrorUseOfMultipleFloatPoints{}
+					return errors_df.ErrorUseOfMultipleFloatPoints{}
 				}
 				else {
 					return_hint = token.NumericType.f64
@@ -81,7 +82,7 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 		} else if peek == `_` {
 			l.consume_char()
 		} else if peek.is_letter() {
-			return ErrorMissingExpectedSymbol{
+			return errors_df.ErrorMismatch{
 				expected: 'value of number type'
 				found:    "\"${peek.ascii_str()}\" of type identifer."
 			}
@@ -112,7 +113,7 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	mut return_operator := start.ascii_str()
 
-	peek := l.peek() or { return ErrorUnexpectedEOF{} }
+	peek := l.peek() or { return errors_df.ErrorUnexpectedEOF{} }
 
 	if peek == `=` && (start == `+` || start == `-` || start == `=` || start == `>`
 		|| start == `<` || start == `%`) {
@@ -169,7 +170,7 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 	mut return_string := ''
 	for {
 		new_char := l.consume_char() or {
-			return ErrorMissingExpectedSymbol{
+			return errors_df.ErrorMismatch{
 				expected: start_symbol.ascii_str()
 				found:    'EOF'
 			}
@@ -182,7 +183,7 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 			break
 		} else if new_char == `\\` {
 			consume := l.consume_char() or {
-				return ErrorMissingExpectedSymbol{
+				return errors_df.ErrorMismatch{
 					expected: start_symbol.ascii_str()
 					found:    'EOF'
 				}
