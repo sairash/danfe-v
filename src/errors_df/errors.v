@@ -18,8 +18,10 @@ pub mut:
 }
 
 pub fn (err DfError) msg() string {
-	return gen_error_start_keyword(err.while, err.when, err.path, err.cur_line, err.cur_col) +
-		err.error.output()
+	while_when := '${err.while} -> ${err.when}'
+	return gen_error_start_keyword(while_when, err.path, err.cur_line, err.cur_col) +
+		err.error.output() + '\n${cli_df.double_underline}${gen_letter(' ', while_when.len +
+		23)}${cli_df.reset}\n'
 }
 
 // have to use this because I am too dumb to make (22r) work
@@ -31,10 +33,8 @@ fn gen_letter(letter string, times int) string {
 	return ret_string
 }
 
-fn gen_error_start_keyword(while string, when string, path string, cur_line int, cur_col int) string {
-	while_when := '${while} -> ${when}'
-	return '\n${cli_df.double_underline}          ${cli_df.reset}\n${cli_df.red}Error${cli_df.reset} Encountered when ${cli_df.bold}${while_when}${cli_df.reset}: \n${gen_letter(' ',
-		while_when.len + 23)}${cli_df.underline}${path}:${cur_line}:${cur_col}${cli_df.reset}: '
+fn gen_error_start_keyword(while_when string, path string, cur_line int, cur_col int) string {
+	return '\n\n${cli_df.double_underline}${gen_letter(' ', while_when.len + 23)}${cli_df.reset}\n${cli_df.red}Error${cli_df.reset} Encountered when ${cli_df.bold}${while_when}${cli_df.reset}: \n${cli_df.underline}${path}:${cur_line}:${cur_col}${cli_df.reset}: '
 }
 
 pub struct ErrorFileIO {}
