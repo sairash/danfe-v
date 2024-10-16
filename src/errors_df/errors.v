@@ -50,7 +50,7 @@ pub mut:
 }
 
 fn (err ErrorMismatch) output() string {
-	return 'Was expecting ${err.expected}, but found ${err.found}.'
+	return 'Was expecting ${cli_df.green}${err.expected}${cli_df.reset}, but found ${cli_df.red}${err.found}${cli_df.reset}.'
 }
 
 pub struct ErrorUnexpectedToken {
