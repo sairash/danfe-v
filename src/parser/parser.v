@@ -3,6 +3,7 @@ module parser
 import lexer
 import token
 import ast
+import grammer
 import errors_df
 
 struct Process {
@@ -29,10 +30,10 @@ fn (mut p Process) next() ! {
 }
 
 fn (mut p Process) eat(expected token.Token) ! {
-	if p.nxt_token.token_type != expected.token_type {
+	if p.cur_token.token_type != expected.token_type {
 		return p.error_generator('advance', errors_df.ErrorMismatch{
 			expected: expected.get_name()
-			found:    p.nxt_token.get_name()
+			found:    p.cur_token.get_name()
 		})
 	}
 	p.next()!
@@ -50,27 +51,95 @@ fn (p &Process) check_next_with_name_token(expected token.Token) bool {
 	return p.nxt_token.get_name() == expected.get_name()
 }
 
-fn (mut p Process) parse_bin_expression() !ast.Expression {
+fn (mut p Process) parse_factor() !ast.Expression {
 	match p.cur_token.token_type {
-		token.String {}
+		token.String {
+			x := p.cur_token.token_type as token.String
+
+			p.eat(token.Token{
+				token_type: token.String{
+					value: x.value
+				}
+			})!
+
+			return ast.Litreal{
+				hint:  ast.LitrealType.str
+				value: x.value
+			}
+		}
+		token.Numeric {
+			x := p.cur_token.token_type as token.Numeric
+			mut lit_type := ast.LitrealType.integer
+			if x.hint == token.NumericType.f64 {
+				lit_type = ast.LitrealType.floating_point
+			}
+			return ast.Litreal{
+				hint:  lit_type
+				value: x.value
+			}
+		}
+		token.Punctuation {
+			x := p.cur_token.token_type as token.Punctuation
+		}
 		else {}
 	}
-	return error('')
+	return error('Hello')
+}
+
+fn (mut p Process) parse_bin_expression(precedence int) !ast.Expression {
+	mut left := p.parse_factor()!
+
+	for {
+		match p.cur_token.token_type {
+			token.Operator {
+				x := p.cur_token.token_type as token.Operator
+				prec := grammer.precedence[x.value] or { break }
+
+				if prec < precedence {
+					break
+				}
+
+				p.eat(token.Token{
+					token_type: token.Operator{
+						value: x.value
+					}
+				})!
+
+				right := p.parse_bin_expression(prec)!
+				println(x.value)
+				println(right)
+				println(left)
+
+				left = ast.Binary{
+					opeator: x.value
+					left:    left
+					right:   right
+				}
+			}
+			else {
+				break
+			}
+		}
+	}
+	return left
 }
 
 fn (mut p Process) parse_expression() !ast.Expression {
 	match p.cur_token.token_type {
 		token.String {
-			if p.check_next_with_name_token(token.Token{
-				token_type: token.Operator{}
-			})
-			{
-				println('yes')
-			}
+			// if p.check_next_with_name_token(token.Token{
+			// 	token_type: token.Operator{}
+			// })
+			// {
+			return p.parse_bin_expression(0)
+			// }
+		}
+		token.EOF {
+			println('EOF')
 		}
 		else {}
 	}
-	return error('')
+	return error('hh')
 }
 
 fn (p &Parse) get_process() !&Process {
@@ -83,7 +152,21 @@ pub fn (mut p Parse) walk() ! {
 	for {
 		mut proc := p.get_process()!
 
-		proc.parse_expression()!
+		// temprorary
+		match proc.cur_token.token_type {
+			token.String {
+				// if p.check_next_with_name_token(token.Token{
+				// 	token_type: token.Operator{}
+				// })
+				// {
+				proc.ast.body << proc.parse_expression()!
+				// }
+			}
+			token.EOF {
+				break
+			}
+			else {}
+		}
 		proc.next() or { break }
 	}
 }
