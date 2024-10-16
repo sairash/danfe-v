@@ -1,6 +1,7 @@
 module ast
 
 pub struct Chunk {
+	pub mut:
 	body []Stat
 	range []i64
 }
@@ -23,8 +24,8 @@ pub struct Litreal {
 pub struct Binary {
 	pub mut:
 		opeator string
-		left Litreal
-		right Litreal
+		left Expression
+		right Expression
 }
 
 
