@@ -37,16 +37,16 @@ fn (mut l Lex) match_punctuation(c u8, open bool) !token.Token {
 		len_brackets := l.bracket_balance.len - 1
 
 		if len_brackets < 0 {
-			return errors_df.ErrorUnexpectedToken{
+			return l.error_generator('match punctuation', errors_df.ErrorUnexpectedToken{
 				token: c.ascii_str()
-			}
+			})
 		}
 
 		if l.bracket_balance[len_brackets] != l.map_balance(c) {
-			return errors_df.ErrorMismatch{
+			return l.error_generator('match punctuation', errors_df.ErrorMismatch{
 				expected: l.map_balance(l.bracket_balance[len_brackets]).ascii_str()
 				found:    c.ascii_str()
-			}
+			})
 		} else {
 			l.bracket_balance.pop()
 		}
@@ -71,7 +71,7 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 		} else if peek == `.` {
 			match return_hint {
 				.f64 {
-					return errors_df.ErrorUseOfMultipleFloatPoints{}
+					return l.error_generator('match number', errors_df.ErrorUseOfMultipleFloatPoints{})
 				}
 				else {
 					return_hint = token.NumericType.f64
@@ -82,10 +82,10 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 		} else if peek == `_` {
 			l.consume_char()
 		} else if peek.is_letter() {
-			return errors_df.ErrorMismatch{
+			return l.error_generator('match number', errors_df.ErrorMismatch{
 				expected: 'value of number type'
 				found:    "\"${peek.ascii_str()}\" of type identifer."
-			}
+			})
 		} else {
 			unsafe {
 				free(peek)
@@ -113,7 +113,9 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	mut return_operator := start.ascii_str()
 
-	peek := l.peek() or { return errors_df.ErrorUnexpectedEOF{} }
+	peek := l.peek() or {
+		return l.error_generator('match operator', errors_df.ErrorUnexpectedEOF{})
+	}
 
 	if peek == `=` && (start == `+` || start == `-` || start == `=` || start == `>`
 		|| start == `<` || start == `%`) {
@@ -170,10 +172,10 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 	mut return_string := ''
 	for {
 		new_char := l.consume_char() or {
-			return errors_df.ErrorMismatch{
+			return l.error_generator('match string', errors_df.ErrorMismatch{
 				expected: start_symbol.ascii_str()
 				found:    'EOF'
-			}
+			})
 		}
 
 		if new_char == start_symbol {
@@ -183,10 +185,10 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 			break
 		} else if new_char == `\\` {
 			consume := l.consume_char() or {
-				return errors_df.ErrorMismatch{
+				return l.error_generator('match string', errors_df.ErrorMismatch{
 					expected: start_symbol.ascii_str()
 					found:    'EOF'
-				}
+				})
 			}
 			return_string += consume.ascii_str()
 		} else {

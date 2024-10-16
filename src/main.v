@@ -16,8 +16,9 @@ fn main() {
 				name:          'run'
 				required_args: 1
 				execute:       fn (cmd cli.Command) ! {
-					pars := parser.Parse.new(cmd.args[0])!
-					println(pars)
+					mut pars := parser.Parse.new(cmd.args[0])!
+					// println(pars)
+					pars.walk()!
 					return
 				}
 			},

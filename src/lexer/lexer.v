@@ -20,12 +20,10 @@ pub mut:
 const size = 1024 * 256
 
 pub fn (mut l Lex) next() !token.Token {
-	l.skip_whitespace() or {
-		return token.Token{
-			token_type: token.EOF{}
-			range:      [l.x]
-		}
-	}
+	l.skip_whitespace() or { return token.Token{
+		token_type: token.EOF{}
+		range:      [l.x]
+	} }
 
 	next_char := l.consume_char() or {
 		return token.Token{
@@ -92,9 +90,9 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 			return l.match_string(next_char, l.get_x())
 		}
 		else {
-			return errors_df.ErrorUnexpectedToken{
+			return l.error_generator('token matching', errors_df.ErrorUnexpectedToken{
 				token: next_char.ascii_str()
-			}
+			})
 		}
 	}
 }
@@ -136,14 +134,30 @@ fn (l &Lex) peek() ?u8 {
 	return none
 }
 
+fn (l &Lex) error_generator(extra_info string, error_data errors_df.ErrorInterface) errors_df.DfError {
+	return errors_df.DfError{
+		while:    'lexing'
+		when:     extra_info
+		path:     l.file_path
+		cur_line: l.cur_line
+		cur_col:  l.cur_col
+		error:    error_data
+	}
+}
+
 // go through a file
 fn Lex.go_through_file(path string) !string {
 	if os.is_file(path) == true {
 		return os.read_file(path)!
 	}
 
-	return errors_df.ErrorFileIO{
-		path: path
+	return errors_df.DfError{
+		while:    'lexing'
+		when:     'going through file'
+		path:     path
+		cur_line: 0
+		cur_col:  0
+		error:    errors_df.ErrorFileIO{}
 	}
 }
 
