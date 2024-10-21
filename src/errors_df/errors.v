@@ -80,6 +80,53 @@ fn (err ErrorUnexpected) output() string {
 	return 'Unexpected Error In the compiler. Raise an Issue in Github'
 }
 
+
+pub struct ErrorUnsupported {}
+
+fn (err ErrorUnsupported) output() string {
+	return 'Unsupported Litreal Found'
+}
+
+pub struct ErrorEvalTypeMisMatch {
+	pub mut:
+	left string
+	right string
+	op string
+}
+
+fn (err ErrorEvalTypeMisMatch) output() string {
+	return 'Trying to run operation "${err.op}" on left: ${err.left} and right: ${err.right}'
+}
+
+
+pub struct ErrorBinaryOperationUnsupported  {
+	pub mut:
+	type_of_value string
+	found string
+	supported []string
+}
+
+fn (err ErrorBinaryOperationUnsupported) output() string {
+	return 'Unsupported Bniary operation in literal "${err.type_of_value}", Found: ${err.found} Supported: ${err.supported}'
+}
+
+
+pub struct ErrorDivisionByZero  {}
+
+fn (err ErrorDivisionByZero) output() string {
+	return 'Division by Zero!'
+}
+
+
+pub struct ErrorUnexpectedWhile {
+	pub mut:
+	while_doing string
+}
+
+fn (err ErrorUnexpectedWhile) output() string {
+	return 'Unexpected Error In the compiler while ${err.while_doing}. Raise an Issue in Github'
+}
+
 // [Not an acutal Error] This Error is kept just to make it easier to end Parising
 pub struct ErrorExpectedEOF {}
 
