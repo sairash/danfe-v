@@ -51,7 +51,7 @@ fn (p &Process) check_next_with_name_token(expected token.Token) bool {
 	return p.nxt_token.get_name() == expected.get_name()
 }
 
-fn (mut p Process) parse_factor() !ast.Expression {
+fn (mut p Process) parse_factor() !ast.Node {
 	match p.cur_token.token_type {
 		token.String {
 			x := p.cur_token.token_type as token.String
@@ -73,6 +73,12 @@ fn (mut p Process) parse_factor() !ast.Expression {
 			if x.hint == token.NumericType.f64 {
 				lit_type = ast.LitrealType.floating_point
 			}
+			p.eat(token.Token{
+				token_type: token.Numeric{
+					value: x.value
+					hint:  x.hint
+				}
+			})!
 			return ast.Litreal{
 				hint:  lit_type
 				value: x.value
@@ -86,7 +92,7 @@ fn (mut p Process) parse_factor() !ast.Expression {
 	return error('Hello')
 }
 
-fn (mut p Process) parse_bin_expression(precedence int) !ast.Expression {
+fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
 	mut left := p.parse_factor()!
 
 	for {
@@ -106,14 +112,11 @@ fn (mut p Process) parse_bin_expression(precedence int) !ast.Expression {
 				})!
 
 				right := p.parse_bin_expression(prec)!
-				println(x.value)
-				println(right)
-				println(left)
 
 				left = ast.Binary{
-					opeator: x.value
-					left:    left
-					right:   right
+					operator: x.value
+					left:     left
+					right:    right
 				}
 			}
 			else {
@@ -124,18 +127,15 @@ fn (mut p Process) parse_bin_expression(precedence int) !ast.Expression {
 	return left
 }
 
-fn (mut p Process) parse_expression() !ast.Expression {
+fn (mut p Process) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
-		token.String {
-			// if p.check_next_with_name_token(token.Token{
-			// 	token_type: token.Operator{}
-			// })
-			// {
-			return p.parse_bin_expression(0)
-			// }
-		}
-		token.EOF {
-			println('EOF')
+		token.String, token.Numeric {
+			if p.check_next_with_name_token(token.Token{
+				token_type: token.Operator{}
+			})
+			{
+				return p.parse_bin_expression(0)
+			}
 		}
 		else {}
 	}
@@ -154,7 +154,7 @@ pub fn (mut p Parse) walk() ! {
 
 		// temprorary
 		match proc.cur_token.token_type {
-			token.String {
+			token.String, token.Numeric {
 				// if p.check_next_with_name_token(token.Token{
 				// 	token_type: token.Operator{}
 				// })
