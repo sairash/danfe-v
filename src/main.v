@@ -1,4 +1,5 @@
 module main
+
 import parser
 import os
 import cli
@@ -18,7 +19,15 @@ fn main() {
 				execute:       fn (cmd cli.Command) ! {
 					mut pars := parser.Parse.new(cmd.args[0])!
 					pars.walk()!
-					println(pars)
+					pars_current := pars.file_process[pars.cur_file] or { 
+						return error("")
+					 }
+					pars_current_body := pars_current.ast.body
+
+					for i := 0;i < pars_current_body.len; i += 1 {
+						println(pars_current_body[i].eval()!)
+					}
+
 					
 					return
 				}
