@@ -159,7 +159,7 @@ fn (mut p Process) parse_expression() !ast.Node {
 			}
 		}
 		token.Punctuation {
-			if p.check_next_with_name_token(token.Token{token_type: token.Numeric{}}) {
+			if p.check_next_with_name_token(token.Token{token_type: token.Numeric{}}) || p.check_next_with_name_token(token.Token{token_type: token.String{}}) {
 				return p.parse_bin_expression(0)
 			}
 		}
