@@ -86,10 +86,31 @@ fn (mut p Process) parse_factor() !ast.Node {
 		}
 		token.Punctuation {
 			x := p.cur_token.token_type as token.Punctuation
+			if x.open && x.value == "(" {
+
+				p.eat(token.Token{
+					token_type: token.Punctuation{
+						open: true
+						value: '('
+					}
+				})!
+
+
+				node := p.parse_bin_expression(0)!
+
+				p.eat(token.Token{token_type: token.Punctuation{open: false, value: ')'}})!
+				
+
+				return node
+			}
+			return error(errors_df.gen_custom_error_message("parsing", "punctuation", p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorMismatch{
+				found: x.value,
+				expected: ")"
+			}))
 		}
 		else {}
 	}
-	return error('Hello')
+	return error(errors_df.gen_custom_error_message("parsing", "punctuation", p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
 }
 
 fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
@@ -129,11 +150,16 @@ fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
 
 fn (mut p Process) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
-		token.String, token.Numeric {
+		token.String, token.Numeric{
 			if p.check_next_with_name_token(token.Token{
 				token_type: token.Operator{}
 			})
 			{
+				return p.parse_bin_expression(0)
+			}
+		}
+		token.Punctuation {
+			if p.check_next_with_name_token(token.Token{token_type: token.Numeric{}}) {
 				return p.parse_bin_expression(0)
 			}
 		}
@@ -154,7 +180,7 @@ pub fn (mut p Parse) walk() ! {
 
 		// temprorary
 		match proc.cur_token.token_type {
-			token.String, token.Numeric {
+			token.String, token.Numeric, token.Punctuation {
 				// if p.check_next_with_name_token(token.Token{
 				// 	token_type: token.Operator{}
 				// })
@@ -187,7 +213,7 @@ pub fn (mut p Parse) add_new_file_to_parse(path string, return_path string) ! {
 
 pub fn (process &Process) error_generator(extra_info string, error_data errors_df.ErrorInterface) errors_df.DfError {
 	return errors_df.DfError{
-		while:    'parsing'
+		while:    '"parsing"'
 		when:     extra_info
 		path:     process.lex.file_path
 		cur_line: process.lex.cur_line
@@ -199,7 +225,7 @@ pub fn (process &Process) error_generator(extra_info string, error_data errors_d
 pub fn (p &Parse) error_generator(extra_info string, error_data errors_df.ErrorInterface) errors_df.DfError {
 	process := p.file_process[p.cur_file] or {
 		return errors_df.DfError{
-			while:    'parsing"'
+			while:    '"parsing"'
 			when:     extra_info
 			path:     p.cur_file
 			cur_line: 0
@@ -210,6 +236,7 @@ pub fn (p &Parse) error_generator(extra_info string, error_data errors_df.ErrorI
 
 	return process.error_generator(extra_info, error_data)
 }
+
 
 // Create New Parser
 pub fn Parse.new(path string) !&Parse {

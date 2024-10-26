@@ -18,11 +18,16 @@ pub mut:
 }
 
 pub fn (err DfError) msg() string {
-	while_when := '${err.while} -> ${err.when}'
-	return gen_error_start_keyword(while_when, err.path, err.cur_line, err.cur_col) +
-		err.error.output() + '\n${cli_df.double_underline}${gen_letter(' ', while_when.len +
+	return gen_custom_error_message(err.while, err.when, err.path, err.cur_line, err.cur_col, err.error)
+}
+
+pub fn gen_custom_error_message(while string, when string, path string, cur_line int, cur_col int, error_int ErrorInterface) string {
+	while_when := '${while} -> ${when}'
+	return gen_error_start_keyword(while_when, path, cur_line, cur_col) +
+		error_int.output() + '\n${cli_df.double_underline}${gen_letter(' ', while_when.len +
 		23)}${cli_df.reset}\n'
 }
+
 
 // have to use this because I am too dumb to make (22r) work
 fn gen_letter(letter string, times int) string {
@@ -125,6 +130,16 @@ pub struct ErrorUnexpectedWhile {
 
 fn (err ErrorUnexpectedWhile) output() string {
 	return 'Unexpected Error In the compiler while ${err.while_doing}. Raise an Issue in Github'
+}
+
+
+pub struct ErrorMissingParenthesis {
+	pub mut:
+	missing_token string
+}
+
+fn (err ErrorMissingParenthesis) output() string {
+	return 'Unexpected Error In the compiler while ${err.missing_token}. Raise an Issue in Github'
 }
 
 // [Not an acutal Error] This Error is kept just to make it easier to end Parising

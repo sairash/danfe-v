@@ -7,7 +7,7 @@ type EvalOutput = string | EvalNumberOutput
 
 type EvalNumberOutput = int | f64
 
-interface Node {
+pub interface Node {
 	eval() !EvalOutput
 }
 
