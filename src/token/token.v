@@ -48,6 +48,7 @@ pub mut:
 pub struct Identifier {
 pub mut:
 	value string
+	reserved string // true if it is a keyword that danfe uses
 }
 
 // Actions for eg: + - *
@@ -57,10 +58,7 @@ pub mut:
 }
 
 // for if else print and other symboles
-pub struct ReservedSymbol {
-pub mut:
-	value string
-}
+
 
 pub type TokenType = EOL
 	| EOF
@@ -70,7 +68,6 @@ pub type TokenType = EOL
 	| String
 	| Identifier
 	| Operator
-	| ReservedSymbol
 	| Comment
 
 pub struct Token {
@@ -108,9 +105,6 @@ pub fn (t Token) get_name() string {
 		}
 		Operator {
 			return "Operator (eg: + , - , * , /)"
-		}
-		ReservedSymbol {
-			return "ReservedSymbol (eg if)"
 		}
 	}
 }

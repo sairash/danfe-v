@@ -151,20 +151,19 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 }
 
 fn (l &Lex) match_reserved_symbols(identifier string) token.Token {
-	if identifier in grammer.reserved_symbols {
-		return token.Token{
-			token_type: token.ReservedSymbol{
-				value: identifier
-			}
-			range:      []
+	mut ret_ident := token.Identifier{
+		value:    identifier
+		reserved: ""
+	}
+	for key, value in grammer.reserved_symbols {
+		if identifier == key || identifier in value {
+			ret_ident.reserved = key
 		}
-	} else {
-		return token.Token{
-			token_type: token.Identifier{
-				value: identifier
-			}
-			range:      []
-		}
+	}
+
+	return token.Token{
+		token_type: ret_ident
+		range:      []
 	}
 }
 
