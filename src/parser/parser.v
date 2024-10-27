@@ -104,8 +104,8 @@ fn (mut p Process) parse_factor(from string) !ast.Node {
 			}
 
 			return ast.Identifier{
-				value: x.value
-				from: from
+				token: x
+				from:  from
 			}
 		}
 		token.Numeric {
@@ -195,7 +195,10 @@ fn (mut p Process) parse_bin_expression(precedence int, from string) !ast.Node {
 
 fn (mut p Process) parse_call_expression(from string) !ast.Node {
 	mut call_expression := ast.CallExpression{
-		base:      p.cur_token.token_type as token.Identifier
+		base:      ast.Identifier{
+			token: p.cur_token.token_type as token.Identifier
+			from:  from
+		}
 		arguments: []
 	}
 
@@ -234,13 +237,25 @@ fn (mut p Process) parse_call_expression(from string) !ast.Node {
 		}
 		call_expression.arguments << p.parse_expression(from)!
 
-		if p.check_token(token.Token{
+		p.eat(token.Token{
 			token_type: token.Seperator{
 				value: ','
 			}
-		})
-		{
-			p.eat_with_name_token(token.Token{ token_type: token.Seperator{} })!
+		}) or {
+			p.eat(token.Token{
+				token_type: token.Punctuation{
+					open:  false
+					value: ')'
+				}
+			}) or {
+				return error(errors_df.gen_custom_error_message('parsing', 'call_exp',
+					p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedTokenExpectedEitherOr{
+					found:    p.cur_token.get_value()
+					either:   ')'
+					or_token: ','
+				}))
+			}
+			break
 		}
 	}
 
@@ -309,7 +324,7 @@ pub fn (mut p Parse) walk() ! {
 				// 	token_type: token.Operator{}
 				// })
 				// {
-				proc.ast.body << proc.parse_expression("")!
+				proc.ast.body << proc.parse_expression('')!
 				// }
 			}
 			token.EOF {
@@ -341,7 +356,7 @@ pub fn (process &Process) error_generator(extra_info string, error_data errors_d
 		when:     extra_info
 		path:     process.lex.file_path
 		cur_line: process.lex.cur_line
-		cur_col:  int(process.cur_token.range[0])
+		cur_col:  if process.cur_token.range.len > 0 { int(process.cur_token.range[0]) } else { 0 }
 		error:    error_data
 	}
 }

@@ -4,13 +4,9 @@ import token
 import strconv
 import errors_df
 
-
-
-
 type EvalOutput = string | int | f64
 
 __global identifier_value_map = map[string]EvalOutput{}
-
 
 pub interface Node {
 	eval() !EvalOutput
@@ -52,6 +48,7 @@ pub enum LitrealType {
 	boolean
 	null
 }
+
 
 pub struct Litreal {
 pub mut:
@@ -116,7 +113,6 @@ fn (bi Binary) eval() !EvalOutput {
 					})
 				}
 				return '${left_eval as string}${right_eval as string}'
-
 			}
 			int {
 				if bi.operator != '*' {
@@ -137,34 +133,33 @@ fn (bi Binary) eval() !EvalOutput {
 			}
 		}
 	}
-	
+
 	return error_gen('eval', 'binary', errors_df.ErrorUnsupported{})
 }
 
-
 pub struct Identifier {
 pub mut:
-	value string
-	from string
+	token    token.Identifier
+	from     string
 }
 
-
 fn (i Identifier) eval() !EvalOutput {
-	return identifier_value_map["${i.from}_${i.value}"] or {
-		return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.value })
+	return identifier_value_map['${i.from}_${i.token.value}'] or {
+		return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 	}
 	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
 
+
 pub struct CallExpression {
 pub mut:
-	base      token.Identifier
+	base      Identifier
 	arguments []Node
 }
 
 fn (ce CallExpression) eval() !EvalOutput {
-	match ce.base.reserved {
+	match ce.base.token.reserved {
 		'print' {
 			print_reserved_function(ce.arguments, false)!
 		}
@@ -172,7 +167,7 @@ fn (ce CallExpression) eval() !EvalOutput {
 			print_reserved_function(ce.arguments, true)!
 		}
 		else {
-			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{ token: ce.base.value })
+			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{ token: ce.base.token.value })
 		}
 	}
 	// for args in ce.arguments {
