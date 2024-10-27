@@ -1,11 +1,10 @@
 module ast
 
+import token
 import strconv
 import errors_df
 
-type EvalOutput = string | EvalNumberOutput
-
-type EvalNumberOutput = int | f64
+type EvalOutput = string | int | f64
 
 pub interface Node {
 	eval() !EvalOutput
@@ -57,22 +56,22 @@ pub mut:
 fn (li Litreal) eval() !EvalOutput {
 	match li.hint {
 		.integer {
-			return EvalNumberOutput(li.value.int())
+			return EvalOutput(li.value.int())
 		}
 		.floating_point {
-			return EvalNumberOutput(strconv.atof_quick(li.value))
+			return EvalOutput(strconv.atof_quick(li.value))
 		}
 		.str {
 			return li.value
 		}
 		.boolean {
 			if li.value == 'true' {
-				return EvalNumberOutput(1)
+				return EvalOutput(1)
 			}
-			return EvalNumberOutput(0)
+			return EvalOutput(0)
 		}
 		.null {
-			return EvalNumberOutput(0)
+			return EvalOutput(0)
 		}
 	}
 	return error_gen('eval', 'litreal', errors_df.ErrorUnsupported{})
@@ -89,7 +88,7 @@ fn (bi Binary) eval() !EvalOutput {
 	left_eval := bi.left.eval()!
 	right_eval := bi.right.eval()!
 
-	if left_eval is EvalNumberOutput && right_eval is EvalNumberOutput {
+	if (left_eval is f64 && right_eval is f64) || (left_eval is int && right_eval is int) {
 		if bi.operator in num_ops {
 			return num_ops[bi.operator](left_eval, right_eval)
 		} else {
@@ -119,6 +118,30 @@ fn (bi Binary) eval() !EvalOutput {
 	return error_gen('eval', 'binary', errors_df.ErrorUnsupported{})
 }
 
-// type Expression = Litreal | Binary
+pub struct CallExpression {
+pub mut:
+	base      token.Identifier
+	arguments []Node
+}
+
+fn (ce CallExpression) eval() !EvalOutput {
+	match ce.base.reserved {
+		'print' {
+			print_reserved_function(ce.arguments, false)!
+		}
+		'println' {
+			print_reserved_function(ce.arguments, true)!
+		}
+		else {
+			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{ token: ce.base.value })
+		}
+	}
+	// for args in ce.arguments {
+	// 	args.eval()!
+	// }
+
+	return EvalOutput(0)
+	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
+}
 
 // type Stat = Node
