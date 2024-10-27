@@ -133,6 +133,15 @@ fn (err ErrorUnexpectedWhile) output() string {
 }
 
 
+pub struct ErrorUndefinedToken {
+	pub mut:
+	token string
+}
+
+fn (err ErrorUndefinedToken) output() string {
+	return 'undefined: ${err.token}'
+}
+
 pub struct ErrorMissingParenthesis {
 	pub mut:
 	missing_token string
