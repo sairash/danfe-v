@@ -105,31 +105,39 @@ fn (bi Binary) eval() !EvalOutput {
 				found:         bi.operator
 			})
 		}
-	} else if left_eval is string && right_eval is string {
-		if bi.operator != '+' {
-			return error_gen('eval', 'binary', errors_df.ErrorBinaryOperationUnsupported{
-				type_of_value: 'str'
-				supported:     ['+']
-				found:         bi.operator
-			})
+	} else if left_eval is string {
+		match right_eval {
+			string {
+				if bi.operator != '+' {
+					return error_gen('eval', 'binary', errors_df.ErrorBinaryOperationUnsupported{
+						type_of_value: 'str'
+						supported:     ['+']
+						found:         bi.operator
+					})
+				}
+				return '${left_eval as string}${right_eval as string}'
+
+			}
+			int {
+				if bi.operator != '*' {
+					return error_gen('eval', 'binary', errors_df.ErrorBinaryOperationUnsupported{
+						type_of_value: 'str'
+						supported:     ['+']
+						found:         bi.operator
+					})
+				}
+				return errors_df.gen_letter(left_eval, right_eval)
+			}
+			else {
+				return error_gen('eval', 'binary', errors_df.ErrorEvalTypeMisMatch{
+					left:  check_eval_name(left_eval)
+					right: check_eval_name(right_eval)
+					op:    bi.operator
+				})
+			}
 		}
-		return '${left_eval as string}${right_eval as string}'
-	}else if left_eval is string && right_eval is int {
-		if bi.operator != '*' {
-			return error_gen('eval', 'binary', errors_df.ErrorBinaryOperationUnsupported{
-				type_of_value: 'str'
-				supported:     ['+']
-				found:         bi.operator
-			})
-		}
-		return errors_df.gen_letter(left_eval, right_eval)
-	} else {
-		return error_gen('eval', 'binary', errors_df.ErrorEvalTypeMisMatch{
-			left:  check_eval_name(left_eval)
-			right: check_eval_name(right_eval)
-			op:    bi.operator
-		})
 	}
+	
 	return error_gen('eval', 'binary', errors_df.ErrorUnsupported{})
 }
 
