@@ -39,6 +39,16 @@ fn (mut p Process) eat(expected token.Token) ! {
 	p.next()!
 }
 
+fn (mut p Process) eat_with_name_token(expected token.Token) ! {
+	if p.cur_token.get_name() != expected.get_name() {
+		return p.error_generator('advance', errors_df.ErrorMismatch{
+			expected: expected.get_name()
+			found:    p.cur_token.get_name()
+		})
+	}
+	p.next()!
+}
+
 fn (p &Process) check_token(expected token.Token) bool {
 	return p.cur_token.token_type == expected.token_type
 }
@@ -86,31 +96,35 @@ fn (mut p Process) parse_factor() !ast.Node {
 		}
 		token.Punctuation {
 			x := p.cur_token.token_type as token.Punctuation
-			if x.open && x.value == "(" {
-
+			if x.open && x.value == '(' {
 				p.eat(token.Token{
 					token_type: token.Punctuation{
-						open: true
+						open:  true
 						value: '('
 					}
 				})!
 
-
 				node := p.parse_bin_expression(0)!
 
-				p.eat(token.Token{token_type: token.Punctuation{open: false, value: ')'}})!
-				
+				p.eat(token.Token{
+					token_type: token.Punctuation{
+						open:  false
+						value: ')'
+					}
+				})!
 
 				return node
 			}
-			return error(errors_df.gen_custom_error_message("parsing", "punctuation", p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorMismatch{
-				found: x.value,
-				expected: ")"
+			return error(errors_df.gen_custom_error_message('parsing', 'punctuation',
+				p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorMismatch{
+				found:    x.value
+				expected: ')'
 			}))
 		}
 		else {}
 	}
-	return error(errors_df.gen_custom_error_message("parsing", "punctuation", p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
+	return error(errors_df.gen_custom_error_message('parsing', 'punctuation', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
 }
 
 fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
@@ -148,24 +162,101 @@ fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
 	return left
 }
 
+fn (mut p Process) parse_call_expression() !ast.Node {
+	mut call_expression := ast.CallExpression{
+		base:      p.cur_token.token_type as token.Identifier
+		arguments: []
+	}
+
+	p.eat_with_name_token(token.Token{
+		token_type: token.Identifier{}
+	})!
+
+	p.eat(token.Token{
+		token_type: token.Punctuation{
+			open:  true
+			value: '('
+		}
+	})!
+
+	for {
+		match p.cur_token.token_type {
+			token.Punctuation {
+				if p.check_token(token.Token{
+					token_type: token.Punctuation{
+						open:  false
+						value: ')'
+					}
+				})
+				{
+					p.eat(token.Token{
+						token_type: token.Punctuation{
+						open:  false
+						value: ')'
+					}
+					})!
+
+					break
+				}
+			}
+			else {}
+		}
+		call_expression.arguments << p.parse_expression()!
+
+		if p.check_token(token.Token{
+			token_type: token.Seperator{
+				value: ','
+			}
+		})
+		{
+			p.eat_with_name_token(token.Token{ token_type: token.Seperator{} })!
+		}
+	}
+
+	return call_expression
+}
+
 fn (mut p Process) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
-		token.String, token.Numeric{
+		token.String, token.Numeric {
 			if p.check_next_with_name_token(token.Token{
 				token_type: token.Operator{}
 			})
 			{
 				return p.parse_bin_expression(0)
 			}
+
+			return p.parse_factor()
+		}
+		token.Identifier {
+			if p.check_next_with_name_token(token.Token{
+				token_type: token.Operator{}
+			})
+			{
+				return p.parse_bin_expression(0)
+			} else if p.check_next_token(token.Token{
+				token_type: token.Punctuation{
+					open:  true
+					value: '('
+				}
+			})
+			{
+				return p.parse_call_expression()
+			}
 		}
 		token.Punctuation {
-			if p.check_next_with_name_token(token.Token{token_type: token.Numeric{}}) || p.check_next_with_name_token(token.Token{token_type: token.String{}}) {
+			if p.check_next_with_name_token(token.Token{ token_type: token.Numeric{} }) || p.check_next_with_name_token(token.Token{
+				token_type: token.String{}
+			}) {
 				return p.parse_bin_expression(0)
 			}
 		}
 		else {}
 	}
-	return error('hh')
+	return error(errors_df.gen_custom_error_message('parsing', 'expression', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
+		token: p.cur_token.get_name()
+	}))
 }
 
 fn (p &Parse) get_process() !&Process {
@@ -180,7 +271,7 @@ pub fn (mut p Parse) walk() ! {
 
 		// temprorary
 		match proc.cur_token.token_type {
-			token.String, token.Numeric, token.Punctuation {
+			token.String, token.Numeric, token.Punctuation, token.Identifier {
 				// if p.check_next_with_name_token(token.Token{
 				// 	token_type: token.Operator{}
 				// })
@@ -236,7 +327,6 @@ pub fn (p &Parse) error_generator(extra_info string, error_data errors_df.ErrorI
 
 	return process.error_generator(extra_info, error_data)
 }
-
 
 // Create New Parser
 pub fn Parse.new(path string) !&Parse {
