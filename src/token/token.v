@@ -77,6 +77,39 @@ pub mut:
 }
 
 
+pub fn (t Token) get_value() string {
+	x := t.token_type
+	match x {
+		EOF{
+			return "EOF"
+		}
+		EOL{
+			return "EOL"
+		}
+		Comment{
+			return "Comment"
+		}
+		Punctuation{
+			return x.value
+		}
+		Seperator{
+			return x.value
+		}
+		Numeric {
+			return x.value
+		}
+		String {
+			return x.value
+		}
+		Identifier {
+			return x.value
+		}
+		Operator {
+			return x.value
+		}
+	}
+}
+
 pub fn (t Token) get_name() string {
 	match t.token_type {
 		EOF{
