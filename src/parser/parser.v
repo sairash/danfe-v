@@ -61,7 +61,7 @@ fn (p &Process) check_next_with_name_token(expected token.Token) bool {
 	return p.nxt_token.get_name() == expected.get_name()
 }
 
-fn (mut p Process) parse_factor() !ast.Node {
+fn (mut p Process) parse_factor(from string) !ast.Node {
 	match p.cur_token.token_type {
 		token.String {
 			x := p.cur_token.token_type as token.String
@@ -75,6 +75,37 @@ fn (mut p Process) parse_factor() !ast.Node {
 			return ast.Litreal{
 				hint:  ast.LitrealType.str
 				value: x.value
+			}
+		}
+		token.Identifier {
+			x := p.cur_token.token_type as token.Identifier
+
+			p.eat(token.Token{
+				token_type: token.Identifier{
+					value:    x.value
+					reserved: x.reserved
+				}
+			})!
+
+			match x.reserved {
+				'true', 'false' {
+					return ast.Litreal{
+						hint:  ast.LitrealType.boolean
+						value: x.reserved
+					}
+				}
+				'nil' {
+					return ast.Litreal{
+						hint:  ast.LitrealType.null
+						value: x.reserved
+					}
+				}
+				else {}
+			}
+
+			return ast.Identifier{
+				value: x.value
+				from: from
 			}
 		}
 		token.Numeric {
@@ -104,7 +135,7 @@ fn (mut p Process) parse_factor() !ast.Node {
 					}
 				})!
 
-				node := p.parse_bin_expression(0)!
+				node := p.parse_bin_expression(0, from)!
 
 				p.eat(token.Token{
 					token_type: token.Punctuation{
@@ -127,8 +158,8 @@ fn (mut p Process) parse_factor() !ast.Node {
 		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
 }
 
-fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
-	mut left := p.parse_factor()!
+fn (mut p Process) parse_bin_expression(precedence int, from string) !ast.Node {
+	mut left := p.parse_factor(from)!
 
 	for {
 		match p.cur_token.token_type {
@@ -146,7 +177,7 @@ fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
 					}
 				})!
 
-				right := p.parse_bin_expression(prec)!
+				right := p.parse_bin_expression(prec, from)!
 
 				left = ast.Binary{
 					operator: x.value
@@ -162,7 +193,7 @@ fn (mut p Process) parse_bin_expression(precedence int) !ast.Node {
 	return left
 }
 
-fn (mut p Process) parse_call_expression() !ast.Node {
+fn (mut p Process) parse_call_expression(from string) !ast.Node {
 	mut call_expression := ast.CallExpression{
 		base:      p.cur_token.token_type as token.Identifier
 		arguments: []
@@ -191,9 +222,9 @@ fn (mut p Process) parse_call_expression() !ast.Node {
 				{
 					p.eat(token.Token{
 						token_type: token.Punctuation{
-						open:  false
-						value: ')'
-					}
+							open:  false
+							value: ')'
+						}
 					})!
 
 					break
@@ -201,7 +232,7 @@ fn (mut p Process) parse_call_expression() !ast.Node {
 			}
 			else {}
 		}
-		call_expression.arguments << p.parse_expression()!
+		call_expression.arguments << p.parse_expression(from)!
 
 		if p.check_token(token.Token{
 			token_type: token.Seperator{
@@ -216,24 +247,24 @@ fn (mut p Process) parse_call_expression() !ast.Node {
 	return call_expression
 }
 
-fn (mut p Process) parse_expression() !ast.Node {
+fn (mut p Process) parse_expression(from string) !ast.Node {
 	match p.cur_token.token_type {
 		token.String, token.Numeric {
 			if p.check_next_with_name_token(token.Token{
 				token_type: token.Operator{}
 			})
 			{
-				return p.parse_bin_expression(0)
+				return p.parse_bin_expression(0, from)
 			}
 
-			return p.parse_factor()
+			return p.parse_factor(from)
 		}
 		token.Identifier {
 			if p.check_next_with_name_token(token.Token{
 				token_type: token.Operator{}
 			})
 			{
-				return p.parse_bin_expression(0)
+				return p.parse_bin_expression(0, from)
 			} else if p.check_next_token(token.Token{
 				token_type: token.Punctuation{
 					open:  true
@@ -241,14 +272,16 @@ fn (mut p Process) parse_expression() !ast.Node {
 				}
 			})
 			{
-				return p.parse_call_expression()
+				return p.parse_call_expression(from)
 			}
+
+			return p.parse_factor(from)
 		}
 		token.Punctuation {
 			if p.check_next_with_name_token(token.Token{ token_type: token.Numeric{} }) || p.check_next_with_name_token(token.Token{
 				token_type: token.String{}
 			}) {
-				return p.parse_bin_expression(0)
+				return p.parse_bin_expression(0, from)
 			}
 		}
 		else {}
@@ -276,7 +309,7 @@ pub fn (mut p Parse) walk() ! {
 				// 	token_type: token.Operator{}
 				// })
 				// {
-				proc.ast.body << proc.parse_expression()!
+				proc.ast.body << proc.parse_expression("")!
 				// }
 			}
 			token.EOF {

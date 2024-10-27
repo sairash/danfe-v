@@ -4,7 +4,13 @@ import token
 import strconv
 import errors_df
 
+
+
+
 type EvalOutput = string | int | f64
+
+__global identifier_value_map = map[string]EvalOutput{}
+
 
 pub interface Node {
 	eval() !EvalOutput
@@ -66,12 +72,12 @@ fn (li Litreal) eval() !EvalOutput {
 		}
 		.boolean {
 			if li.value == 'true' {
-				return EvalOutput(1)
+				return 1
 			}
-			return EvalOutput(0)
+			return 0
 		}
 		.null {
-			return EvalOutput(0)
+			return 0
 		}
 	}
 	return error_gen('eval', 'litreal', errors_df.ErrorUnsupported{})
@@ -108,6 +114,15 @@ fn (bi Binary) eval() !EvalOutput {
 			})
 		}
 		return '${left_eval as string}${right_eval as string}'
+	}else if left_eval is string && right_eval is int {
+		if bi.operator != '*' {
+			return error_gen('eval', 'binary', errors_df.ErrorBinaryOperationUnsupported{
+				type_of_value: 'str'
+				supported:     ['+']
+				found:         bi.operator
+			})
+		}
+		return errors_df.gen_letter(left_eval, right_eval)
 	} else {
 		return error_gen('eval', 'binary', errors_df.ErrorEvalTypeMisMatch{
 			left:  check_eval_name(left_eval)
@@ -117,6 +132,22 @@ fn (bi Binary) eval() !EvalOutput {
 	}
 	return error_gen('eval', 'binary', errors_df.ErrorUnsupported{})
 }
+
+
+pub struct Identifier {
+pub mut:
+	value string
+	from string
+}
+
+
+fn (i Identifier) eval() !EvalOutput {
+	return identifier_value_map["${i.from}_${i.value}"] or {
+		return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.value })
+	}
+	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
+}
+
 
 pub struct CallExpression {
 pub mut:

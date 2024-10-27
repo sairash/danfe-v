@@ -1,3 +1,5 @@
 print("Hello", 1, 2.50, (10 + (30 / 10) * 40 ))
 println("")
 dekhauln("New line", 1, 2.50, (50 + (30 / 10) * 40 ))
+println("-"*70)
+print("True ->", true, "Thik ->",  thik, "False ->", false, "Nil ->", nil, "Khali ->", khali, "Sunna ->", sunna)
