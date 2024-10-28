@@ -163,8 +163,15 @@ pub mut:
 	found_amount string
 }
 
+fn (err ErrorArgumentsMisMatch) one_or_multiple(amount string) string {
+	if amount == '1' {
+		return '$amount argument'
+	}
+	return '$amount arguments'
+}
+
 fn (err ErrorArgumentsMisMatch) output() string {
-	return 'Arguments mismatch for ${err.func_name} have: ${err.found_amount} arguments want: ${err.expected_amount} arguments.'
+	return 'Arguments mismatch for function "${err.func_name}" \nwant: ${err.one_or_multiple(err.expected_amount)} \nhave: ${err.one_or_multiple(err.found_amount)}'
 }
 
 

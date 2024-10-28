@@ -179,10 +179,10 @@ fn (ce CallExpression) eval() !EvalOutput {
 			print_reserved_function(ce.arguments, true)!
 		}
 		'input' {
-			if ce.arguments.len > 1 {
+			if ce.arguments.len != 1 {
 				return error_gen('eval', 'input_eval', errors_df.ErrorArgumentsMisMatch{
 					func_name:       ce.base.token.value
-					expected_amount: '(0 - 1)'
+					expected_amount: '1'
 					found_amount:    '${ce.arguments.len}'
 				})
 			}
