@@ -429,3 +429,43 @@ pub fn Parse.new(path string) !&Parse {
 	parse_file.add_new_file_to_parse(path, '')!
 	return parse_file
 }
+
+pub fn (mut p Parse) append_to_lex(input_data string) ![]ast.Node {
+	mut process := p.file_process['/tmp/123'] or {
+		return p.error_generator('appending to lex', errors_df.ErrorUnexpected{})
+	}
+	process.lex.file_data += input_data
+	process.lex.file_len += input_data.len
+
+	process.nxt_token = token.Token{
+		token_type: token.EOL{}
+	}
+	process.next()!
+
+	p.walk()!
+
+	return process.ast.body
+}
+
+pub fn Parse.new_temp(go_through_file_data string) !&Parse {
+	identifier_value_map = map[string]ast.EvalOutput{}
+	return &Parse{
+		file_process:  {
+			'/tmp/123': &Process{
+				lex: lexer.Lex{
+					x:               0
+					file_data:       go_through_file_data
+					file_path:       '/tmp/123'
+					return_path:     ''
+					processed:       false
+					file_len:        go_through_file_data.len
+					cur_col:         1
+					cur_line:        1
+					bracket_balance: []
+				}
+			}
+		}
+		cur_file:      '/tmp/123'
+		starting_file: '/tmp/123'
+	}
+}

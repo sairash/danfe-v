@@ -3,13 +3,15 @@ module main
 import parser
 import os
 import cli
+import repl
 
 fn main() {
 	mut app := cli.Command{
 		name:        'example-app'
 		description: 'example-app'
 		execute:     fn (cmd cli.Command) ! {
-			println('hello app')
+			mut repl_cur := repl.init()
+			repl_cur.start()!
 			return
 		}
 		commands:    [
@@ -21,7 +23,7 @@ fn main() {
 					pars.walk()!
 					pars_current := pars.file_process[pars.cur_file] or { 
 						return error("")
-					 }
+					}
 					pars_current_body := pars_current.ast.body
 
 					for i := 0;i < pars_current_body.len; i += 1 {
