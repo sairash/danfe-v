@@ -135,7 +135,7 @@ fn (mut p Process) parse_factor(from string) !ast.Node {
 					}
 				})!
 
-				node := p.parse_bin_expression(0, from)!
+				node := p.parse_bin_logical_expression(0, from)!
 
 				p.eat(token.Token{
 					token_type: token.Punctuation{
@@ -146,25 +146,23 @@ fn (mut p Process) parse_factor(from string) !ast.Node {
 
 				return node
 			}
-			return error(errors_df.gen_custom_error_message('parsing', 'punctuation',
-				p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorMismatch{
-				found:    x.value
-				expected: ')'
-			}))
 		}
 		else {}
 	}
-	return error(errors_df.gen_custom_error_message('parsing', 'punctuation', p.lex.file_path,
-		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
+	return error(errors_df.gen_custom_error_message('parsing', 'parse_factor', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
+		token: p.cur_token.get_value()
+	}))
 }
 
-fn (mut p Process) parse_bin_expression(precedence int, from string) !ast.Node {
+fn (mut p Process) parse_bin_logical_expression(precedence int, from string) !ast.Node {
 	mut left := p.parse_factor(from)!
 
 	for {
 		match p.cur_token.token_type {
 			token.Operator {
 				x := p.cur_token.token_type as token.Operator
+
 				prec := grammer.precedence[x.value] or { break }
 
 				if prec < precedence {
@@ -177,12 +175,23 @@ fn (mut p Process) parse_bin_expression(precedence int, from string) !ast.Node {
 					}
 				})!
 
-				right := p.parse_bin_expression(prec, from)!
+				right := p.parse_bin_logical_expression(prec, from)!
 
-				left = ast.Binary{
-					operator: x.value
-					left:     left
-					right:    right
+				match x.value {
+					'&&', '||', '!=', '==', '>', '<', '>=', '<=' {
+						left = ast.Logical{
+							operator: x.value
+							left:     left
+							right:    right
+						}
+					}
+					else {
+						left = ast.Binary{
+							operator: x.value
+							left:     left
+							right:    right
+						}
+					}
 				}
 			}
 			else {
@@ -269,7 +278,7 @@ fn (mut p Process) parse_expression(from string) !ast.Node {
 				token_type: token.Operator{}
 			})
 			{
-				return p.parse_bin_expression(0, from)
+				return p.parse_bin_logical_expression(0, from)
 			}
 
 			return p.parse_factor(from)
@@ -279,7 +288,7 @@ fn (mut p Process) parse_expression(from string) !ast.Node {
 				token_type: token.Operator{}
 			})
 			{
-				return p.parse_bin_expression(0, from)
+				return p.parse_bin_logical_expression(0, from)
 			} else if p.check_next_token(token.Token{
 				token_type: token.Punctuation{
 					open:  true
@@ -296,7 +305,7 @@ fn (mut p Process) parse_expression(from string) !ast.Node {
 			if p.check_next_with_name_token(token.Token{ token_type: token.Numeric{} }) || p.check_next_with_name_token(token.Token{
 				token_type: token.String{}
 			}) {
-				return p.parse_bin_expression(0, from)
+				return p.parse_bin_logical_expression(0, from)
 			}
 		}
 		else {}
