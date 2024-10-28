@@ -1,0 +1,2 @@
+x = input("Enter Value of x: ")
+print("Just Input value: ", x)

@@ -149,10 +149,9 @@ fn (i Identifier) eval() !EvalOutput {
 	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
-fn (i Identifier) set_value(output EvalOutput)  {
+fn (i Identifier) set_value(output EvalOutput) {
 	identifier_value_map['${i.from}_${i.token.value}'] = output
 }
-
 
 pub struct AssignmentStatement {
 pub mut:
@@ -178,6 +177,16 @@ fn (ce CallExpression) eval() !EvalOutput {
 		}
 		'println' {
 			print_reserved_function(ce.arguments, true)!
+		}
+		'input' {
+			if ce.arguments.len > 1 {
+				return error_gen('eval', 'input_eval', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '(0 - 1)'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			return input_reserved_function(ce.arguments[0])
 		}
 		else {
 			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{

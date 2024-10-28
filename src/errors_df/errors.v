@@ -156,6 +156,18 @@ fn (err ErrorMissingParenthesis) output() string {
 	return 'Unexpected Error In the compiler while ${err.missing_token}. Raise an Issue in Github'
 }
 
+pub struct ErrorArgumentsMisMatch {
+pub mut:
+	func_name string
+	expected_amount string
+	found_amount string
+}
+
+fn (err ErrorArgumentsMisMatch) output() string {
+	return 'Arguments mismatch for ${err.func_name} have: ${err.found_amount} arguments want: ${err.expected_amount} arguments.'
+}
+
+
 // [Not an acutal Error] This Error is kept just to make it easier to end Parising
 pub struct ErrorExpectedEOF {}
 
