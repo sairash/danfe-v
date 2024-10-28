@@ -136,6 +136,26 @@ fn (bi Binary) eval() !EvalOutput {
 	return error_gen('eval', 'binary', errors_df.ErrorUnsupported{})
 }
 
+pub struct Logical {
+pub mut:
+	operator string
+	left     Node
+	right    Node
+}
+
+fn (lo Logical) eval() !EvalOutput {
+	left_eval := lo.left.eval()!
+	right_eval := lo.right.eval()!
+
+	if lo.operator in num_ops {
+		return num_ops[lo.operator](left_eval, right_eval)
+	}
+
+	return error_gen('eval', 'logical', errors_df.ErrorUnexpectedToken{
+		token: lo.operator
+	})
+}
+
 pub struct Identifier {
 pub mut:
 	token token.Identifier
