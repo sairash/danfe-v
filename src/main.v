@@ -3,12 +3,14 @@ module main
 import parser
 import os
 import cli
+import cli_df
 import repl
 
 fn main() {
 	mut app := cli.Command{
-		name:        'example-app'
-		description: 'example-app'
+		name:        'Danfe'
+		description: 'A programming language implementation in vlang.'
+		version: cli_df.version
 		execute:     fn (cmd cli.Command) ! {
 			mut repl_cur := repl.init()
 			repl_cur.start()!
