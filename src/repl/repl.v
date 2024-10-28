@@ -22,13 +22,13 @@ const available_commands = {
 
 pub fn (mut rp Repl) start() ! {
 	println('')
-	println('${cli_df.theme_purple} ┌──────────${cli_df.theme_green}──────┐ ${cli_df.magenta} ┌ ${cli_df.reset}')
-	println('${cli_df.theme_purple} │         _ ${cli_df.theme_green}  __ │ ${cli_df.magenta} │ ${cli_df.reset}  Welcome to the Danfe REPL (for help with Danfe itself, type ${cli_df.bg_white}${cli_df.black} exit ${cli_df.reset} , then run ${cli_df.bg_gray} df help ${cli_df.reset}).')
-	println('${cli_df.theme_purple} │      __| |${cli_df.theme_green} / _|│ ${cli_df.magenta} │ ${cli_df.reset}  Note: the REPL is highly experimental. For best Danfe experience, use a text editor,')
-	println('${cli_df.theme_purple} │     / _` |${cli_df.theme_green}| |_ │ ${cli_df.magenta} │ ${cli_df.reset}  save your code in a ${cli_df.bg_gray} main.df ${cli_df.reset} file and execute: ${cli_df.bg_gray} df run main.df ${cli_df.reset}')
-	println('${cli_df.theme_purple} │    | (_| |${cli_df.theme_green}|  _|│ ${cli_df.magenta} │ ${cli_df.reset}  Danfe ${cli_df.bold} ${cli_df.version} ${cli_df.reset} Use ${cli_df.bg_white}${cli_df.black} list ${cli_df.reset} to see the program so far.')
-	println('${cli_df.theme_purple} │     \\__,_|${cli_df.theme_green}|_|  │ ${cli_df.magenta} │ ${cli_df.reset}  Use Ctrl-C or ${cli_df.bg_white}${cli_df.black} exit ${cli_df.reset} to exit, or ${cli_df.bg_white}${cli_df.black} help ${cli_df.reset} to see other available commands.')
-	println('${cli_df.theme_purple} └──────────${cli_df.theme_green}──────┘ ${cli_df.magenta} └ ${cli_df.reset}')
+	println('${cli_df.theme_purple}  🮏🮏🮏🮏🮏🮏🮏🮏🮏🮏${cli_df.theme_green}🮏🮏🮏🮏🮏🮏  ${cli_df.magenta} ┌ ${cli_df.reset}')
+	println('${cli_df.theme_purple} 🮍██████████${cli_df.theme_green}██████🮌 ${cli_df.magenta} │ ${cli_df.reset}  Welcome to the Danfe REPL (for help with Danfe itself, type ${cli_df.bg_white}${cli_df.black} exit ${cli_df.reset} , then run ${cli_df.bg_gray} df help ${cli_df.reset}).')
+	println('${cli_df.theme_purple} 🮍████████🮌 🮍${cli_df.theme_green}🮐🮜 _▐🮌 ${cli_df.magenta} │ ${cli_df.reset}  Note: the REPL is highly experimental. For best Danfe experience, use a text editor,')
+	println('${cli_df.theme_purple} 🮍█████🮜 _` 🮍${cli_df.theme_green}🮌 🮍██🮌 ${cli_df.magenta} │ ${cli_df.reset}  save your code in a ${cli_df.bg_gray} main.df ${cli_df.reset} file and execute: ${cli_df.bg_gray} df run main.df ${cli_df.reset}')
+	println('${cli_df.theme_purple} 🮍████🮌 (_| 🮍${cli_df.theme_green}🮌  _▐🮌 ${cli_df.magenta} │ ${cli_df.reset}  Danfe ${cli_df.bold} ${cli_df.version} ${cli_df.reset} Use ${cli_df.bg_white}${cli_df.black} list ${cli_df.reset} to see the program so far.')
+	println('${cli_df.theme_purple} 🮍█████🮟__,_🮍${cli_df.theme_green}🮌_🮍██🮌 ${cli_df.magenta} │ ${cli_df.reset}  Use Ctrl-C or ${cli_df.bg_white}${cli_df.black} exit ${cli_df.reset} to exit, or ${cli_df.bg_white}${cli_df.black} help ${cli_df.reset} to see other available commands.')
+	println('${cli_df.theme_purple}  🮎🮎🮎🮎🮎🮎🮎🮎🮎🮎${cli_df.theme_green}🮎🮎🮎🮎🮎🮎  ${cli_df.magenta} └ ${cli_df.reset}')
 
 	mut repl_parser := parser.Parse.new_temp('')!
 	mut last_line_executed := 0

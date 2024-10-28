@@ -1,6 +1,6 @@
 <div align="center" style="display:grid;place-items:center;">
 <p>
-    <a href="/" target="_blank"><img width="80" src="./assets/df.png" alt="V logo"></a>
+    <a href="/" target="_blank"><img width="80" src="./assets/df_rounded_more.png" alt="V logo"></a>
 </p>
 <h1>Danfe Programming Language</h1>
 
