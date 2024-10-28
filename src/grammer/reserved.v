@@ -13,6 +13,6 @@ pub const reserved_symbols = {
 	'input':    ['sodha']
 	'nil':      ['khali', 'null', 'sunna']
 	'not':      ['hoina']
-	'or':       ['ya']
-	'and':      ['ra']
+	// 'or':       ['ya']
+	// 'and':      ['ra']
 }
