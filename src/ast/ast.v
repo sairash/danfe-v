@@ -49,7 +49,6 @@ pub enum LitrealType {
 	null
 }
 
-
 pub struct Litreal {
 pub mut:
 	hint  LitrealType
@@ -139,8 +138,8 @@ fn (bi Binary) eval() !EvalOutput {
 
 pub struct Identifier {
 pub mut:
-	token    token.Identifier
-	from     string
+	token token.Identifier
+	from  string
 }
 
 fn (i Identifier) eval() !EvalOutput {
@@ -150,7 +149,21 @@ fn (i Identifier) eval() !EvalOutput {
 	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
+fn (i Identifier) set_value(output EvalOutput)  {
+	identifier_value_map['${i.from}_${i.token.value}'] = output
+}
 
+
+pub struct AssignmentStatement {
+pub mut:
+	variable Identifier
+	init     Node
+}
+
+fn (asss AssignmentStatement) eval() !EvalOutput {
+	asss.variable.set_value(asss.init.eval()!)
+	return EvalOutput(0)
+}
 
 pub struct CallExpression {
 pub mut:
@@ -167,7 +180,9 @@ fn (ce CallExpression) eval() !EvalOutput {
 			print_reserved_function(ce.arguments, true)!
 		}
 		else {
-			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{ token: ce.base.token.value })
+			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
+				token: ce.base.token.value
+			})
 		}
 	}
 	// for args in ce.arguments {

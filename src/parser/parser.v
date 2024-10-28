@@ -303,7 +303,47 @@ fn (mut p Process) parse_expression(from string) !ast.Node {
 	}
 	return error(errors_df.gen_custom_error_message('parsing', 'expression', p.lex.file_path,
 		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
-		token: p.cur_token.get_name()
+		token: p.cur_token.get_value()
+	}))
+}
+
+fn (mut p Process) parse_assignment(from string) !ast.Node {
+	match p.cur_token.token_type {
+		token.Identifier {
+			if p.check_next_token(token.Token{
+				token_type: token.Operator{
+					value: '='
+				}
+			})
+			{
+				ident := p.cur_token.token_type as token.Identifier
+
+				p.eat_with_name_token(token.Token{
+					token_type: token.Identifier{}
+				})!
+				p.eat(token.Token{
+					token_type: token.Operator{
+						value: '='
+					}
+				})!
+
+				return ast.AssignmentStatement{
+					variable: ast.Identifier{
+						token: ident
+						from:  from
+					}
+					init:     p.parse_expression(from)!
+				}
+			}
+
+			return p.parse_expression(from)
+		}
+		else {}
+	}
+
+	return error(errors_df.gen_custom_error_message('parsing', 'expression', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
+		token: p.cur_token.get_value()
 	}))
 }
 
@@ -319,13 +359,16 @@ pub fn (mut p Parse) walk() ! {
 
 		// temprorary
 		match proc.cur_token.token_type {
-			token.String, token.Numeric, token.Punctuation, token.Identifier {
+			token.String, token.Numeric, token.Punctuation {
 				// if p.check_next_with_name_token(token.Token{
 				// 	token_type: token.Operator{}
 				// })
 				// {
 				proc.ast.body << proc.parse_expression('')!
 				// }
+			}
+			token.Identifier {
+				proc.ast.body << proc.parse_assignment('')!
 			}
 			token.EOF {
 				break
