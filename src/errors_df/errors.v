@@ -147,6 +147,16 @@ fn (err ErrorUnexpectedTokenExpectedEitherOr) output() string {
 	return 'Unexpected value: found ${err.found}, expecting either "${err.either}" or "${err.or_token}"'
 }
 
+
+pub struct ErrorTryingToUseReservedIdentifier {
+pub mut:
+	identifier string
+}
+
+fn (err ErrorTryingToUseReservedIdentifier) output() string {
+	return 'The "${err.identifier}" identifier is reserved by Danfe and user programs cannot assign value to to it.'
+}
+
 pub struct ErrorMissingParenthesis {
 pub mut:
 	missing_token string

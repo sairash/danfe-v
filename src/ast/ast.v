@@ -180,6 +180,10 @@ pub mut:
 }
 
 fn (asss AssignmentStatement) eval() !EvalOutput {
+	if asss.variable.token.reserved != "" {
+		return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{ identifier: asss.variable.token.value })
+		
+	}
 	asss.variable.set_value(asss.init.eval()!)
 	return EvalOutput(0)
 }
