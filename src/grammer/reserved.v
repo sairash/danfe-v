@@ -8,6 +8,7 @@ pub const reserved_symbols = {
 	'else':     ['natra', 'fi']
 	'loop':     ['ghum', 'for', 'while', 'until']
 	'break':    ['todh']
+	'continue': ['xod']
 	'print':    ['dekhau']
 	'println':  ['dekhauln']
 	'input':    ['sodha']
