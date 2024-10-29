@@ -1,15 +1,21 @@
+# Ansi Characters to make it pretty in terminal
+reset = '\e[0m'
+red = '\e[31m'
+green = '\e[32m'
+bold = '\e[1m'
+
+# Define a value to check
 number_to_check = 10
 
 
+dekhauln()
 # WAP stands for write a program
-dekhauln("WAP if the number", number_to_check, "is odd or even")
+dekhauln("WAP if the number ", number_to_check, " is ", red ,"odd ", reset ,"or ", green ,"even", reset)
 
-
+dekhau(bold ,"> ")
 # % aka mod gets the remainder of x / 2
-
-dekhau(">")
 yedi number_to_check % 2 {
-    dekhauln("The number", number_to_check, "is an odd number")
+    dekhauln("The number ", number_to_check, " is an ", red,"odd ", reset,"number")
 }natra {
-    dekhauln("The number", number_to_check, "is an even number")
+    dekhauln("The number ", number_to_check, " is an ", green,"even ", reset,"number")
 }
