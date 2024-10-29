@@ -1,5 +1,6 @@
 module ast
 
+import math
 import errors_df
 
 const num_ops = {
@@ -69,6 +70,20 @@ const num_ops = {
 		}
 		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
 			while_doing: 'using "*" operator'
+		})
+	}
+	'%':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
+		if left is int && right is int {
+			return EvalOutput(left % right)
+		} else if left is int && right is f64 {
+			return EvalOutput(math.fmod(left, right))
+		} else if left is f64 && right is int {
+			return EvalOutput(math.fmod(left, right))
+		} else if left is f64 && right is f64 {
+			return EvalOutput(math.fmod(left, right))
+		}
+		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
+			while_doing: 'using "%" operator'
 		})
 	}
 	'==': fn (left EvalOutput, right EvalOutput) !EvalOutput {
