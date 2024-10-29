@@ -189,7 +189,7 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 					found:    'EOF'
 				})
 			}
-			return_string += consume.ascii_str()
+			return_string = '\\' + consume.ascii_str()
 		} else {
 			return_string += new_char.ascii_str()
 		}
