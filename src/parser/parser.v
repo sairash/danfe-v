@@ -124,6 +124,12 @@ fn (mut p Process) parse_factor(from string) !ast.Node {
 						value: x.reserved
 					}
 				}
+				'break' {
+					return ast.BreakStatement{}
+				}
+				'continue' {
+					return ast.ContinueStatement{}
+				}
 				else {}
 			}
 
@@ -348,7 +354,6 @@ fn (mut p Process) parse_cond_statement(from string, parse_condition bool, hint 
 		body:      []
 	}
 
-
 	p.eat(token.Token{
 		token_type: token.Punctuation{
 			open:  true
@@ -357,7 +362,6 @@ fn (mut p Process) parse_cond_statement(from string, parse_condition bool, hint 
 	})!
 
 	cond_clause.body << p.walk()!
-
 
 	p.eat(token.Token{
 		token_type: token.Punctuation{
@@ -383,7 +387,6 @@ fn (mut p Process) parse_if_statement(from string) !ast.Node {
 		match x {
 			token.Identifier {
 				if x.reserved == 'else' {
-
 					if p.check_next_identifier_reserved('if') {
 						p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 						if else_used {
@@ -420,6 +423,43 @@ fn (mut p Process) parse_if_statement(from string) !ast.Node {
 	}
 
 	return ret_statement
+}
+
+fn (mut p Process) parse_loop_statement(from string) !ast.Node {
+	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
+	mut loop_statement := ast.ForStatement{
+		condition: if p.check_token(token.Token{
+			token_type: token.Punctuation{
+				open:  true
+				value: '{'
+			}
+		})
+		{
+			none
+		} else {
+			p.parse_expression(from)!
+		}
+		body:      []
+	}
+
+
+	p.eat(token.Token{
+		token_type: token.Punctuation{
+			open:  true
+			value: '{'
+		}
+	})!
+
+	loop_statement.body << p.walk()!
+
+	p.eat(token.Token{
+		token_type: token.Punctuation{
+			open:  false
+			value: '}'
+		}
+	})!
+
+	return loop_statement
 }
 
 fn (p &Process) get_first_value_from_node(ast_nodes []ast.Node) !ast.Node {
@@ -460,6 +500,8 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 
 			if ident.reserved == 'if' {
 				return p.parse_if_statement(from)!
+			} else if ident.reserved == 'loop' {
+				return p.parse_loop_statement(from)!
 			}
 
 			return p.parse_expression(from)!
