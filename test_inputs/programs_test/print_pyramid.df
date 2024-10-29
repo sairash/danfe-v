@@ -1,0 +1,23 @@
+star_count = 1
+
+println("\n", "3 line solution: ")
+# Good Solution
+for star_count < 10 {
+    println("*"*star_count)
+    star_count = star_count + 1
+}
+
+
+star_count = 1
+
+dekhauln("\n", "Multiple Loop Test solution: ")
+# Multiple Loop Solution
+ghum star_count < 10 {
+    y = 1
+    ghum y <= star_count {
+        dekhau("*")
+        y = y + 1
+    }
+    dekhau("\n")
+    star_count = star_count + 1
+}
