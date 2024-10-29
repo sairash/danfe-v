@@ -19,7 +19,7 @@
 
 <br>
 
-Danfe is a programming language that I am hacking up in my spare time. It's active on developement and will take much more time to be useable.
+Danfe is a now **turing complete** programming language that I am hacking up in my spare time. It's active on developement and will take much more time to be useable.
 
 ## Danfe Repl
 
