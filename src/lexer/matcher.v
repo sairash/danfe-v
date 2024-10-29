@@ -153,7 +153,7 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 fn (l &Lex) match_reserved_symbols(identifier string) token.Token {
 	mut ret_ident := token.Identifier{
 		value:    identifier
-		reserved: ""
+		reserved: ''
 	}
 	for key, value in grammer.reserved_symbols {
 		if identifier == key || identifier in value {
@@ -189,7 +189,20 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 					found:    'EOF'
 				})
 			}
-			return_string = '\\' + consume.ascii_str()
+			match consume.ascii_str() {
+				'e' {
+					return_string += '\e'
+				}
+				'n' {
+					return_string += '\n'
+				}
+				't' {
+					return_string += '\t'
+				}
+				else {
+					return_string += '\\${consume.ascii_str()}'
+				}
+			}
 		} else {
 			return_string += new_char.ascii_str()
 		}
