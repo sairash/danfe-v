@@ -180,9 +180,10 @@ pub mut:
 }
 
 fn (asss AssignmentStatement) eval() !EvalOutput {
-	if asss.variable.token.reserved != "" {
-		return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{ identifier: asss.variable.token.value })
-		
+	if asss.variable.token.reserved != '' {
+		return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+			identifier: asss.variable.token.value
+		})
 	}
 	asss.variable.set_value(asss.init.eval()!)
 	return EvalOutput(0)
@@ -195,17 +196,15 @@ pub enum Conditions {
 }
 
 pub struct ConditionClause {
-	pub mut:
-	hint Conditions
-	condition &Node
-	body []Node
+pub mut:
+	hint      Conditions
+	condition ?Node
+	body      []Node
 }
 
 fn (c &ConditionClause) is_condition_met() !bool {
-	if c.condition == unsafe { nil } {
-		return false
-	}
-	cond_eval := c.condition.eval()!
+	cond_eval := c.condition or { return false }
+		.eval()!
 
 	match cond_eval {
 		string {
@@ -218,33 +217,36 @@ fn (c &ConditionClause) is_condition_met() !bool {
 			return cond_eval == 1.0
 		}
 	}
-
 }
 
-
 fn (cond &ConditionClause) eval() !EvalOutput {
+	if cond.hint != Conditions.else_clause && cond.condition == none {
+		return error_gen('eval', 'condition', errors_df.ErrorNoConditionsProvided{
+			token: '${cond.hint}'
+		})
+	}
+
 	if cond.hint == Conditions.else_clause || cond.is_condition_met()! {
 		for val in cond.body {
 			val.eval()!
 		}
-	}else {
-		return error_gen('eval', 'condition', errors_df.ErrorUndefinedToken{
-			token: "$cond.hint"
-		}) 
+
+		return 1
 	}
 
 	return 0
 }
 
 pub struct IfStatement {
-	pub mut:
+pub mut:
 	clauses []Node
 }
 
 fn (if_statement IfStatement) eval() !EvalOutput {
-
 	for clause in if_statement.clauses {
-		clause.eval()!
+		if clause.eval()! as int == 1 {
+			break
+		}
 	}
 
 	return 0
