@@ -188,6 +188,68 @@ fn (asss AssignmentStatement) eval() !EvalOutput {
 	return EvalOutput(0)
 }
 
+pub enum Conditions {
+	if_clause
+	else_if_clause
+	else_clause
+}
+
+pub struct ConditionClause {
+	pub mut:
+	hint Conditions
+	condition &Node
+	body []Node
+}
+
+fn (c &ConditionClause) is_condition_met() !bool {
+	if c.condition == unsafe { nil } {
+		return false
+	}
+	cond_eval := c.condition.eval()!
+
+	match cond_eval {
+		string {
+			return cond_eval != ''
+		}
+		int {
+			return cond_eval == 1
+		}
+		f64 {
+			return cond_eval == 1.0
+		}
+	}
+
+}
+
+
+fn (cond &ConditionClause) eval() !EvalOutput {
+	if cond.hint == Conditions.else_clause || cond.is_condition_met()! {
+		for val in cond.body {
+			val.eval()!
+		}
+	}else {
+		return error_gen('eval', 'condition', errors_df.ErrorUndefinedToken{
+			token: "$cond.hint"
+		}) 
+	}
+
+	return 0
+}
+
+pub struct IfStatement {
+	pub mut:
+	clauses []Node
+}
+
+fn (if_statement IfStatement) eval() !EvalOutput {
+
+	for clause in if_statement.clauses {
+		clause.eval()!
+	}
+
+	return 0
+}
+
 pub struct CallExpression {
 pub mut:
 	base      Identifier
