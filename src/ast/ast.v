@@ -6,7 +6,15 @@ import errors_df
 
 type EvalOutput = string | int | f64
 
+enum ProgramState {
+	@none
+	break_
+	continue_
+}
+
 __global identifier_value_map = map[string]EvalOutput{}
+
+__global program_state = ProgramState.@none
 
 pub interface Node {
 	eval() !EvalOutput
@@ -202,8 +210,8 @@ pub mut:
 	body      []Node
 }
 
-fn (c &ConditionClause) is_condition_met() !bool {
-	cond_eval := c.condition or { return false }
+fn is_condition_met(condition ?Node) !bool {
+	cond_eval := condition or { return true }
 		.eval()!
 
 	match cond_eval {
@@ -226,7 +234,7 @@ fn (cond &ConditionClause) eval() !EvalOutput {
 		})
 	}
 
-	if cond.hint == Conditions.else_clause || cond.is_condition_met()! {
+	if is_condition_met(cond.condition)! {
 		for val in cond.body {
 			val.eval()!
 		}
@@ -245,6 +253,53 @@ pub mut:
 fn (if_statement IfStatement) eval() !EvalOutput {
 	for clause in if_statement.clauses {
 		if clause.eval()! as int == 1 {
+			break
+		}
+	}
+
+	return 0
+}
+
+pub struct BreakStatement {}
+
+fn (br BreakStatement) eval() !EvalOutput {
+	program_state = ProgramState.break_
+	return 0
+}
+
+pub struct ContinueStatement {}
+
+fn (br ContinueStatement) eval() !EvalOutput {
+	program_state = ProgramState.continue_
+	return 0
+}
+
+pub struct ForStatement {
+pub mut:
+	condition ?Node
+	body      []Node
+}
+
+fn (for_st ForStatement) eval() !EvalOutput {
+	for {
+		
+		program_state = ProgramState.@none
+
+		if is_condition_met(for_st.condition)! {
+			for st in for_st.body {
+				if program_state == ProgramState.@none {
+					st.eval()!
+				}else {
+					break
+				}
+			}
+
+		}else{
+			break
+		}
+
+		if program_state == ProgramState.break_ {
+			program_state = ProgramState.@none
 			break
 		}
 	}
