@@ -32,8 +32,8 @@ fn (mut p Process) next() ! {
 fn (mut p Process) eat(expected token.Token) ! {
 	if p.cur_token.token_type != expected.token_type {
 		return p.error_generator('advance', errors_df.ErrorMismatch{
-			expected: expected.get_name()
-			found:    p.cur_token.get_name()
+			expected: expected.get_value()
+			found:    p.cur_token.get_value()
 		})
 	}
 	p.next()!
@@ -42,8 +42,8 @@ fn (mut p Process) eat(expected token.Token) ! {
 fn (mut p Process) eat_with_name_token(expected token.Token) ! {
 	if p.cur_token.get_name() != expected.get_name() {
 		return p.error_generator('advance', errors_df.ErrorMismatch{
-			expected: expected.get_name()
-			found:    p.cur_token.get_name()
+			expected: expected.get_value()
+			found:    p.cur_token.get_value()
 		})
 	}
 	p.next()!
@@ -55,6 +55,30 @@ fn (p &Process) check_token(expected token.Token) bool {
 
 fn (p &Process) check_next_token(expected token.Token) bool {
 	return p.nxt_token.token_type == expected.token_type
+}
+
+fn (p &Process) check_next_identifier_reserved(expected string) bool {
+	x := p.nxt_token.token_type
+	match x {
+		token.Identifier {
+			return x.reserved == expected
+		}
+		else {
+			return false
+		}
+	}
+}
+
+fn (p &Process) check_current_identifier_reserved(expected string) bool {
+	x := p.cur_token.token_type
+	match x {
+		token.Identifier {
+			return x.reserved == expected
+		}
+		else {
+			return false
+		}
+	}
 }
 
 fn (p &Process) check_next_with_name_token(expected token.Token) bool {
@@ -316,17 +340,106 @@ fn (mut p Process) parse_expression(from string) !ast.Node {
 	}))
 }
 
-fn (mut p Process) parse_assignment(from string) !ast.Node {
+fn (mut p Process) parse_cond_statement(from string, parse_condition bool, hint ast.Conditions) !ast.Node {
+	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
+	mut cond_clause := ast.ConditionClause{
+		hint:      hint
+		condition: if parse_condition { p.parse_expression(from)! } else { none }
+		body:      []
+	}
+
+
+	p.eat(token.Token{
+		token_type: token.Punctuation{
+			open:  true
+			value: '{'
+		}
+	})!
+
+	cond_clause.body << p.walk()!
+
+
+	p.eat(token.Token{
+		token_type: token.Punctuation{
+			open:  false
+			value: '}'
+		}
+	})!
+
+	return cond_clause
+}
+
+fn (mut p Process) parse_if_statement(from string) !ast.Node {
+	mut else_used := false
+
+	mut ret_statement := ast.IfStatement{
+		clauses: []
+	}
+
+	ret_statement.clauses << p.parse_cond_statement(from, true, ast.Conditions.if_clause)!
+
+	for {
+		x := p.cur_token.token_type
+		match x {
+			token.Identifier {
+				if x.reserved == 'else' {
+
+					if p.check_next_identifier_reserved('if') {
+						p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
+						if else_used {
+							return error(errors_df.gen_custom_error_message('parsing',
+								'if_statement', p.lex.file_path, p.lex.cur_line, p.lex.cur_col,
+								errors_df.ErrorUsingElseIfAfterElse{
+								trying_to_use: 'else if'
+								before_using:  'else'
+							}))
+						}
+
+						ret_statement.clauses << p.parse_cond_statement(from, true, ast.Conditions.else_if_clause)!
+					} else {
+						if else_used {
+							return error(errors_df.gen_custom_error_message('parsing',
+								'if_statement', p.lex.file_path, p.lex.cur_line, p.lex.cur_col,
+								errors_df.ErrorUsingElseIfAfterElse{
+								trying_to_use: 'else'
+								before_using:  'else'
+							}))
+						}
+
+						ret_statement.clauses << p.parse_cond_statement(from, false, ast.Conditions.else_clause)!
+						else_used = true
+					}
+				} else {
+					break
+				}
+			}
+			else {
+				break
+			}
+		}
+	}
+
+	return ret_statement
+}
+
+fn (p &Process) get_first_value_from_node(ast_nodes []ast.Node) !ast.Node {
+	if ast_nodes.len > 0 {
+		return ast_nodes[0]
+	}
+	return error(errors_df.gen_custom_error_message('parsing', 'empty_exp', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
+}
+
+fn (mut p Process) parse_identifier(from string) !ast.Node {
 	match p.cur_token.token_type {
 		token.Identifier {
+			ident := p.cur_token.token_type as token.Identifier
 			if p.check_next_token(token.Token{
 				token_type: token.Operator{
 					value: '='
 				}
 			})
 			{
-				ident := p.cur_token.token_type as token.Identifier
-
 				p.eat_with_name_token(token.Token{
 					token_type: token.Identifier{}
 				})!
@@ -345,7 +458,11 @@ fn (mut p Process) parse_assignment(from string) !ast.Node {
 				}
 			}
 
-			return p.parse_expression(from)
+			if ident.reserved == 'if' {
+				return p.parse_if_statement(from)!
+			}
+
+			return p.parse_expression(from)!
 		}
 		else {}
 	}
@@ -362,22 +479,35 @@ fn (p &Parse) get_process() !&Process {
 	}
 }
 
-pub fn (mut p Parse) walk() ! {
-	for {
-		mut proc := p.get_process()!
+pub fn (mut proc Process) walk() ![]ast.Node {
+	mut return_node := []ast.Node{}
 
+	for {
 		// temprorary
 		match proc.cur_token.token_type {
-			token.String, token.Numeric, token.Punctuation {
+			token.String, token.Numeric {
 				// if p.check_next_with_name_token(token.Token{
 				// 	token_type: token.Operator{}
 				// })
 				// {
-				proc.ast.body << proc.parse_expression('')!
+				return_node << proc.parse_expression('')!
 				// }
 			}
+			token.Punctuation {
+				if proc.check_token(token.Token{
+					token_type: token.Punctuation{
+						open:  false
+						value: '}'
+					}
+				})
+				{
+					break
+				}
+
+				return_node << proc.parse_expression('')!
+			}
 			token.Identifier {
-				proc.ast.body << proc.parse_assignment('')!
+				return_node << proc.parse_identifier('')!
 			}
 			token.EOF {
 				break
@@ -386,6 +516,13 @@ pub fn (mut p Parse) walk() ! {
 		}
 		proc.next() or { break }
 	}
+
+	return return_node
+}
+
+pub fn (mut p Parse) walk() ! {
+	mut proc := p.get_process()!
+	proc.ast.body << proc.walk()!
 }
 
 pub fn (mut p Parse) add_new_file_to_parse(path string, return_path string) ! {

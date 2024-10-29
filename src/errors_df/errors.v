@@ -112,6 +112,27 @@ fn (err ErrorBinaryOperationUnsupported) output() string {
 	return 'Unsupported Bniary operation in literal "${err.type_of_value}", Found: ${err.found} Supported: ${err.supported}'
 }
 
+
+pub struct ErrorUsingElseIfAfterElse {
+	pub mut:
+	trying_to_use string
+	before_using string
+}
+
+fn (err ErrorUsingElseIfAfterElse) output() string {
+	return 'Cannot use "${err.trying_to_use}" after the use of "${err.before_using}"'
+}
+
+pub struct ErrorNoConditionsProvided {
+	pub mut:
+	token string
+}
+
+fn (err ErrorNoConditionsProvided) output() string {
+	return 'No Conditions provided for ${err.token}.'
+}
+
+
 pub struct ErrorDivisionByZero {}
 
 fn (err ErrorDivisionByZero) output() string {
