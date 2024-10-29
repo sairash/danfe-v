@@ -1,0 +1,19 @@
+x = 10
+
+if 'H' == 'h' || 1.0 == 1 {
+    println("if")
+} else if x == 10 {
+    println("else if")
+} else {
+    println("else")
+}
+
+x = "5"
+
+yedi x == 1 {
+    dekhauln("x = 1")
+}natra yedi x == 5 {
+    dekhauln("x == 5")
+}natra {
+    dekhauln("x is a string")
+}
