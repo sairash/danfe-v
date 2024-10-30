@@ -118,7 +118,7 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	}
 
 	if peek == `=` && (start == `+` || start == `-` || start == `=` || start == `>`
-		|| start == `<` || start == `%` || start == `!`) {
+		|| start == `<` || start == `%` || start == `!` || start == `?`) {
 		return_operator += peek.ascii_str()
 		l.consume_char()
 	} else if peek == `|` && start == `|` {

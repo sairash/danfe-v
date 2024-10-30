@@ -478,18 +478,26 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 				token_type: token.Operator{
 					value: '='
 				}
+			}) || p.check_next_token(token.Token{
+				token_type: token.Operator{
+					value: '?='
+				}
 			})
 			{
 				p.eat_with_name_token(token.Token{
 					token_type: token.Identifier{}
 				})!
+
+				operator_value := p.cur_token.get_value()
+				
 				p.eat(token.Token{
 					token_type: token.Operator{
-						value: '='
+						value: operator_value
 					}
 				})!
 
 				return ast.AssignmentStatement{
+					hint: operator_value
 					variable: ast.Identifier{
 						token: ident
 						from:  from

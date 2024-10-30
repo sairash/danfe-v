@@ -1,3 +1,8 @@
-x = 10
+x = 0
 y = x + 5
-println(x, y, x * y)
+
+# if x | y is nil value is going to be 10
+x ?= 10
+y ?= 4
+
+println(x," ", y, " ", x * y)

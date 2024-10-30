@@ -6,6 +6,20 @@ import errors_df
 
 type EvalOutput = string | int | f64
 
+pub fn (evl EvalOutput) is_empty() bool {
+	match evl {
+		string {
+			return evl == ''
+		}
+		int {
+			return evl == 0
+		}
+		f64 {
+			return evl == 0
+		}
+	}
+}
+
 enum ProgramState {
 	@none
 	break_
@@ -183,6 +197,7 @@ fn (i Identifier) set_value(output EvalOutput) {
 
 pub struct AssignmentStatement {
 pub mut:
+	hint     string @[required]
 	variable Identifier
 	init     Node
 }
@@ -193,8 +208,23 @@ fn (asss AssignmentStatement) eval() !EvalOutput {
 			identifier: asss.variable.token.value
 		})
 	}
+
+	match asss.hint {
+		'='{}
+		'?='{
+			if !asss.variable.eval()!.is_empty() {
+				return 0
+			}
+		}
+		else {
+			return error_gen('eval', 'assignment', errors_df.ErrorUnexpectedToken{
+				token: asss.hint
+			})
+		}
+	}
+
 	asss.variable.set_value(asss.init.eval()!)
-	return EvalOutput(0)
+	return 1
 }
 
 pub enum Conditions {
@@ -282,19 +312,17 @@ pub mut:
 
 fn (for_st ForStatement) eval() !EvalOutput {
 	for {
-		
 		program_state = ProgramState.@none
 
 		if is_condition_met(for_st.condition)! {
 			for st in for_st.body {
 				if program_state == ProgramState.@none {
 					st.eval()!
-				}else {
+				} else {
 					break
 				}
 			}
-
-		}else{
+		} else {
 			break
 		}
 
