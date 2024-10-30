@@ -234,6 +234,7 @@ fn (mut p Process) parse_bin_logical_expression(precedence int, from string) !as
 
 fn (mut p Process) parse_call_expression(from string) !ast.Node {
 	mut call_expression := ast.CallExpression{
+		from: from
 		base:      ast.Identifier{
 			token: p.cur_token.token_type as token.Identifier
 			from:  from
@@ -462,6 +463,7 @@ fn (mut p Process) parse_loop_statement(from string) !ast.Node {
 	return loop_statement
 }
 
+
 fn (p &Process) get_first_value_from_node(ast_nodes []ast.Node) !ast.Node {
 	if ast_nodes.len > 0 {
 		return ast_nodes[0]
@@ -510,7 +512,7 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 				return p.parse_if_statement(from)!
 			} else if ident.reserved == 'loop' {
 				return p.parse_loop_statement(from)!
-			}
+			} 
 
 			return p.parse_expression(from)!
 		}

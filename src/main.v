@@ -27,7 +27,7 @@ fn main() {
 					pars_current_body := pars_current.ast.body
 
 					for i := 0; i < pars_current_body.len; i += 1 {
-						pars_current_body[i].eval()!
+						pars_current_body[i].eval('')!
 					}
 					return
 				}

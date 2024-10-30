@@ -3,6 +3,7 @@ module ast
 import token
 import strconv
 import errors_df
+import rand
 
 type EvalOutput = string | int | f64
 
@@ -20,18 +21,24 @@ pub fn (evl EvalOutput) is_empty() bool {
 	}
 }
 
+pub fn gen_process_id() string {
+	return rand.ascii(14)
+}
+
 enum ProgramState {
 	@none
 	break_
 	continue_
 }
 
+
 __global identifier_value_map = map[string]EvalOutput{}
 
-__global program_state = ProgramState.@none
+
+__global program_state_map = map[string]ProgramState{}
 
 pub interface Node {
-	eval() !EvalOutput
+	eval(process_id string) !EvalOutput
 }
 
 fn check_eval_name(output EvalOutput) string {
@@ -77,7 +84,7 @@ pub mut:
 	value string
 }
 
-fn (li Litreal) eval() !EvalOutput {
+fn (li Litreal) eval(process_id string) !EvalOutput {
 	match li.hint {
 		.integer {
 			return EvalOutput(li.value.int())
@@ -108,9 +115,9 @@ pub mut:
 	right    Node
 }
 
-fn (bi Binary) eval() !EvalOutput {
-	left_eval := bi.left.eval()!
-	right_eval := bi.right.eval()!
+fn (bi Binary) eval(process_id string) !EvalOutput {
+	left_eval := bi.left.eval(process_id)!
+	right_eval := bi.right.eval(process_id)!
 
 	if (left_eval is f64 && right_eval is f64) || (left_eval is int && right_eval is int) {
 		if bi.operator in num_ops {
@@ -165,9 +172,9 @@ pub mut:
 	right    Node
 }
 
-fn (lo Logical) eval() !EvalOutput {
-	left_eval := lo.left.eval()!
-	right_eval := lo.right.eval()!
+fn (lo Logical) eval(process_id string) !EvalOutput {
+	left_eval := lo.left.eval(process_id)!
+	right_eval := lo.right.eval(process_id)!
 
 	if lo.operator in num_ops {
 		return num_ops[lo.operator](left_eval, right_eval)
@@ -184,15 +191,46 @@ pub mut:
 	from  string
 }
 
-fn (i Identifier) eval() !EvalOutput {
-	return identifier_value_map['${i.from}_${i.token.value}'] or {
+fn (i Identifier) eval(process_id string) !EvalOutput {
+	return identifier_value_map['${i.from}${if process_id != '' {
+		'.' + process_id
+	} else {
+		''
+	}}.${i.token.value}'] or {
+		if process_id != '' && '${i.from}.${i.token.value}' in identifier_value_map {
+			unsafe {
+				return identifier_value_map['${i.from}.${i.token.value}']
+			}
+		}
 		return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 	}
 	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
-fn (i Identifier) set_value(output EvalOutput) {
-	identifier_value_map['${i.from}_${i.token.value}'] = output
+fn (i Identifier) set_value(process_id string, output EvalOutput) {
+	if '${i.from}${if process_id != '' {
+		'.' + process_id
+	} else {
+		''
+	}}.${i.token.value}' in identifier_value_map {
+		identifier_value_map['${i.from}${if process_id != '' {
+			'.' + process_id
+		} else {
+			''
+		}}.${i.token.value}'] = output
+		return
+	}
+
+	if '${i.from}.${i.token.value}' in identifier_value_map {
+		identifier_value_map['${i.from}.${i.token.value}'] = output
+		return
+	}
+
+	identifier_value_map['${i.from}${if process_id != '' {
+		'.' + process_id
+	} else {
+		''
+	}}.${i.token.value}'] = output
 }
 
 pub struct AssignmentStatement {
@@ -202,7 +240,7 @@ pub mut:
 	init     Node
 }
 
-fn (asss AssignmentStatement) eval() !EvalOutput {
+fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 	if asss.variable.token.reserved != '' {
 		return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
 			identifier: asss.variable.token.value
@@ -210,9 +248,9 @@ fn (asss AssignmentStatement) eval() !EvalOutput {
 	}
 
 	match asss.hint {
-		'='{}
-		'?='{
-			if !asss.variable.eval()!.is_empty() {
+		'=' {}
+		'?=' {
+			if !asss.variable.eval(process_id)!.is_empty() {
 				return 0
 			}
 		}
@@ -223,7 +261,7 @@ fn (asss AssignmentStatement) eval() !EvalOutput {
 		}
 	}
 
-	asss.variable.set_value(asss.init.eval()!)
+	asss.variable.set_value(process_id, asss.init.eval(process_id)!)
 	return 1
 }
 
@@ -240,9 +278,9 @@ pub mut:
 	body      []Node
 }
 
-fn is_condition_met(condition ?Node) !bool {
+fn is_condition_met(process_id string, condition ?Node) !bool {
 	cond_eval := condition or { return true }
-		.eval()!
+		.eval(process_id)!
 
 	match cond_eval {
 		string {
@@ -257,16 +295,16 @@ fn is_condition_met(condition ?Node) !bool {
 	}
 }
 
-fn (cond &ConditionClause) eval() !EvalOutput {
+fn (cond &ConditionClause) eval(process_id string) !EvalOutput {
 	if cond.hint != Conditions.else_clause && cond.condition == none {
 		return error_gen('eval', 'condition', errors_df.ErrorNoConditionsProvided{
 			token: '${cond.hint}'
 		})
 	}
 
-	if is_condition_met(cond.condition)! {
+	if is_condition_met(process_id, cond.condition)! {
 		for val in cond.body {
-			val.eval()!
+			val.eval(process_id)!
 		}
 
 		return 1
@@ -280,28 +318,28 @@ pub mut:
 	clauses []Node
 }
 
-fn (if_statement IfStatement) eval() !EvalOutput {
+fn (if_statement IfStatement) eval(process_id string) !EvalOutput {
 	for clause in if_statement.clauses {
-		if clause.eval()! as int == 1 {
+		if clause.eval(process_id)! as int == 1 {
 			break
 		}
 	}
 
-	return 0
+	return 1
 }
 
 pub struct BreakStatement {}
 
-fn (br BreakStatement) eval() !EvalOutput {
-	program_state = ProgramState.break_
-	return 0
+fn (br BreakStatement) eval(process_id string) !EvalOutput {
+	program_state_map[process_id] = ProgramState.break_
+	return 1
 }
 
 pub struct ContinueStatement {}
 
-fn (br ContinueStatement) eval() !EvalOutput {
-	program_state = ProgramState.continue_
-	return 0
+fn (br ContinueStatement) eval(process_id string) !EvalOutput {
+	program_state_map[process_id] = ProgramState.continue_
+	return 1
 }
 
 pub struct ForStatement {
@@ -310,14 +348,17 @@ pub mut:
 	body      []Node
 }
 
-fn (for_st ForStatement) eval() !EvalOutput {
+fn (for_st ForStatement) eval(process_id string) !EvalOutput {
+	new_process_id := gen_process_id()
 	for {
-		program_state = ProgramState.@none
+		if new_process_id in program_state_map {
+			program_state_map.delete(new_process_id)
+		}
 
-		if is_condition_met(for_st.condition)! {
+		if is_condition_met(new_process_id, for_st.condition)! {
 			for st in for_st.body {
-				if program_state == ProgramState.@none {
-					st.eval()!
+				if new_process_id !in program_state_map {
+					st.eval(new_process_id)!
 				} else {
 					break
 				}
@@ -326,8 +367,8 @@ fn (for_st ForStatement) eval() !EvalOutput {
 			break
 		}
 
-		if program_state == ProgramState.break_ {
-			program_state = ProgramState.@none
+		if program_state_map[new_process_id] == ProgramState.break_ {
+			program_state_map.delete(new_process_id)
 			break
 		}
 	}
@@ -335,19 +376,23 @@ fn (for_st ForStatement) eval() !EvalOutput {
 	return 0
 }
 
+
+
 pub struct CallExpression {
 pub mut:
+	from      string @[required]
 	base      Identifier
 	arguments []Node
 }
 
-fn (ce CallExpression) eval() !EvalOutput {
+fn (ce CallExpression) eval(process_id string) !EvalOutput {
+	new_process_id := gen_process_id()
 	match ce.base.token.reserved {
 		'print' {
-			print_reserved_function(ce.arguments, false)!
+			print_reserved_function(new_process_id, ce.arguments, false)!
 		}
 		'println' {
-			print_reserved_function(ce.arguments, true)!
+			print_reserved_function(new_process_id, ce.arguments, true)!
 		}
 		'input' {
 			if ce.arguments.len != 1 {
@@ -357,7 +402,7 @@ fn (ce CallExpression) eval() !EvalOutput {
 					found_amount:    '${ce.arguments.len}'
 				})
 			}
-			return input_reserved_function(ce.arguments[0])
+			return input_reserved_function(new_process_id, ce.arguments[0])
 		}
 		else {
 			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
