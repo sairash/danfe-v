@@ -351,9 +351,7 @@ pub mut:
 fn (for_st ForStatement) eval(process_id string) !EvalOutput {
 	new_process_id := gen_process_id()
 	for {
-		if new_process_id in program_state_map {
-			program_state_map.delete(new_process_id)
-		}
+		program_state_map.delete(new_process_id)
 
 		if is_condition_met(new_process_id, for_st.condition)! {
 			for st in for_st.body {
