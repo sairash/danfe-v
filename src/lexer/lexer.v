@@ -157,7 +157,9 @@ fn Lex.go_through_file(path string) !string {
 		path:     path
 		cur_line: 0
 		cur_col:  0
-		error:    errors_df.ErrorFileIO{}
+		error:    errors_df.ErrorFileIO{
+			file_path: path
+		}
 	}
 }
 
