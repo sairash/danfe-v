@@ -1,6 +1,8 @@
 module grammer
 
 pub const reserved_symbols = {
+	'import':   ['ayat', 'prayog', 'include']
+	'as':       ['naam']
 	'false':    ['bethik']
 	'true':     ['thik']
 	'function': ['karya', 'func']
@@ -9,7 +11,7 @@ pub const reserved_symbols = {
 	'loop':     ['ghum', 'for', 'while', 'until']
 	'break':    ['todh']
 	'continue': ['xod']
-	'return':    ['pathau']
+	'return':   ['pathau']
 	'print':    ['dekhau']
 	'println':  ['dekhauln']
 	'input':    ['sodha']
