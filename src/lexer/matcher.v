@@ -150,7 +150,7 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	}
 }
 
-fn (l &Lex) match_reserved_symbols(identifier string) token.Token {
+fn (mut l Lex) match_reserved_symbols(identifier string) token.Token {
 	mut ret_ident := token.Identifier{
 		value:    identifier
 		reserved: ''
@@ -159,6 +159,11 @@ fn (l &Lex) match_reserved_symbols(identifier string) token.Token {
 		if identifier == key || identifier in value {
 			ret_ident.reserved = key
 		}
+	}
+
+	
+	if ret_ident.reserved != "import"  && ret_ident.reserved != "as" {
+		l.can_import = false
 	}
 
 	return token.Token{

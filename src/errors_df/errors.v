@@ -60,6 +60,13 @@ fn (err ErrorMismatch) output() string {
 	return 'Was expecting ${cli_df.green}${err.expected}${cli_df.reset}, but found ${cli_df.red}${err.found}${cli_df.reset}.'
 }
 
+pub struct ErrorImportPlacement {}
+
+fn (err ErrorImportPlacement) output() string {
+	return 'The Placement of "import" should be at the start of the file before any other operation.'
+}
+
+
 pub struct ErrorUnexpectedToken {
 pub mut:
 	token string

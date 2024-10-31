@@ -11,7 +11,7 @@ pub mut:
 	cur_col         int
 	file_data       string
 	file_len        int
-	processed       bool
+	can_import      bool
 	return_path     string
 	file_path       string
 	bracket_balance []u8
@@ -52,12 +52,15 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 			}
 		}
 		`(`, `[`, `{` {
+			l.can_import = false
 			return l.match_punctuation(next_char, true)
 		}
 		`)`, `]`, `}` {
+			l.can_import = false
 			return l.match_punctuation(next_char, false)
 		}
 		`;`, `,` {
+			l.can_import = false
 			return token.Token{
 				token_type: token.Seperator{
 					value: next_char.ascii_str()
@@ -65,10 +68,12 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 				range:      [l.get_x()]
 			}
 		}
-		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^`, `?`{
+		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^`, `?` {
+			l.can_import = false
 			return l.match_operators(next_char, l.get_x())
 		}
 		`0`...`9` {
+			l.can_import = false
 			return l.match_number(next_char, l.get_x())
 		}
 		`#` { // comment
@@ -176,11 +181,10 @@ pub fn Lex.new(path string, return_path string) !Lex {
 		file_data:       go_through_file_data
 		file_path:       path
 		return_path:     return_path
-		processed:       false
+		can_import:      true
 		file_len:        go_through_file_data.len
 		cur_col:         1
 		cur_line:        1
 		bracket_balance: []
 	}
 }
-

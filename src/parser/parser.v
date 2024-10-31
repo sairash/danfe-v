@@ -8,15 +8,17 @@ import errors_df
 
 struct Parse {
 pub mut:
-	lex       lexer.Lex
-	cur_token token.Token
-	nxt_token token.Token
-	ast       ast.Chunk
-	module_   string @[required]
-	cur_file  string
+	lex        lexer.Lex
+	prev_token token.Token
+	cur_token  token.Token
+	nxt_token  token.Token
+	ast        ast.Chunk
+	module_    string @[required]
+	cur_file   string
 }
 
 fn (mut p Parse) next() ! {
+	p.prev_token = p.cur_token
 	p.cur_token = p.nxt_token
 	p.nxt_token = p.lex.next()!
 	if p.check_token(token.Token{ token_type: token.EOF{} }) {
@@ -624,7 +626,7 @@ pub fn Parse.new_temp(go_through_file_data string) !&Parse {
 			file_data:       go_through_file_data
 			file_path:       '/tmp/sai'
 			return_path:     ''
-			processed:       false
+			can_import:      true
 			file_len:        go_through_file_data.len
 			cur_col:         1
 			cur_line:        1
