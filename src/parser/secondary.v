@@ -1,10 +1,20 @@
 module parser
 
+import os
 import ast
 import token
 import errors_df
 
-fn (mut p Process) parse_function(from string) !ast.Node {
+pub fn format_path(input_str string) string {
+	mut result := input_str
+
+	if !result.ends_with('.df') {
+		result += '.df'
+	}
+	return result
+}
+
+fn (mut p Parse) parse_function() !ast.Node {
 	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 
 	var_name := p.cur_token.token_type
@@ -14,10 +24,9 @@ fn (mut p Process) parse_function(from string) !ast.Node {
 	})!
 
 	mut ret_func := ast.FunctionDeclaration{
-		from:       from
 		name:       ast.Identifier{
 			token: var_name as token.Identifier
-			from:  from
+			from:  p.module_
 		}
 		parameters: []
 	}
@@ -52,7 +61,7 @@ fn (mut p Process) parse_function(from string) !ast.Node {
 			else {}
 		}
 
-		parsed_factor := p.parse_factor(from)!
+		parsed_factor := p.parse_factor()!
 		match parsed_factor {
 			ast.Identifier {
 				ret_func.parameters << parsed_factor
@@ -106,4 +115,81 @@ fn (mut p Process) parse_function(from string) !ast.Node {
 	})!
 
 	return ret_func
+}
+
+fn resolve_absolute_path(base_path string, relative string) string {
+	relative_path := format_path(relative)
+	if relative_path.starts_with('/') {
+		return relative_path
+	}
+
+	mut base_components := base_path.trim_string_left('/').split('/')
+	relative_components := relative_path.split('/')
+
+	mut result_components := base_components.clone()
+
+	for component in relative_components {
+		match component {
+			'.' {} // Skip current directory marker
+			'..' { // Go up one directory
+				if result_components.len > 0 {
+					result_components.delete_last()
+				}
+			}
+			'' {} // Skip empty components
+			else {
+				result_components << component
+			}
+		}
+	}
+
+	return '/' + result_components.join('/')
+}
+
+fn (p Parse) strip_filename(path string) !string {
+	base := os.base(path)
+	parts := os.file_name(base).split('.')
+
+	if parts.len > 1 {
+		return parts[0..parts.len - 1].join('.')
+	}
+
+	return error(errors_df.gen_custom_error_message('parsing', 'file_name', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorFileIO{}))
+}
+
+fn (mut p Parse) parse_import_statement() !ast.Node {
+	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
+
+	if !p.check_token_with_name(token.Token{
+		token_type: token.String{}
+	}) {
+		return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
+			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
+			token: '"file" after import for eg. (import "./file_name.df") or (import "file_name") or (import "file_name" as "my_file")'
+		}))
+	}
+
+	mut import_statement := ast.ImportStatement{
+		from_path:    p.cur_file
+		from_module_: p.module_
+		path:         resolve_absolute_path(p.cur_file, (p.parse_factor()! as ast.Litreal).value)
+	}
+
+	if !p.check_current_identifier_reserved('as') {
+		import_statement.module_ = p.strip_filename(import_statement.path)!
+	} else {
+		p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
+		if !p.check_token_with_name(token.Token{
+			token_type: token.String{}
+		}) {
+			return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
+				p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
+				token: '"file_aliases" after as for eg. (import "./file_name.df" as "my_file")'
+			}))
+		}
+		import_statement.module_ = (p.parse_factor()! as ast.Litreal).value
+	}
+
+	return import_statement
 }
