@@ -1,0 +1,12 @@
+func return_ex(){
+        return "!"
+}
+
+function return_string(name) {
+    function return_inner_string(){
+        return "Hello "
+    }
+    return return_inner_string() + name + return_ex()
+}
+
+println(return_string("Sairash"))

@@ -9,11 +9,12 @@ pub const reserved_symbols = {
 	'loop':     ['ghum', 'for', 'while', 'until']
 	'break':    ['todh']
 	'continue': ['xod']
+	'return':    ['pathau']
 	'print':    ['dekhau']
 	'println':  ['dekhauln']
 	'input':    ['sodha']
 	'nil':      ['khali', 'null', 'sunna']
-	'not':      ['hoina']
+	// 'not':      ['hoina']
 	// 'or':       ['ya']
 	// 'and':      ['ra']
 }

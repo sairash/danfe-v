@@ -102,6 +102,16 @@ fn (mut p Process) parse_factor(from string) !ast.Node {
 			}
 		}
 		token.Identifier {
+			if p.check_next_token(token.Token{
+				token_type: token.Punctuation{
+					open:  true
+					value: '('
+				}
+			})
+			{
+				return p.parse_call_expression(from)
+			}
+
 			x := p.cur_token.token_type as token.Identifier
 
 			p.eat(token.Token{
@@ -123,12 +133,6 @@ fn (mut p Process) parse_factor(from string) !ast.Node {
 						hint:  ast.LitrealType.null
 						value: x.reserved
 					}
-				}
-				'break' {
-					return ast.BreakStatement{}
-				}
-				'continue' {
-					return ast.ContinueStatement{}
 				}
 				else {}
 			}
@@ -234,7 +238,7 @@ fn (mut p Process) parse_bin_logical_expression(precedence int, from string) !as
 
 fn (mut p Process) parse_call_expression(from string) !ast.Node {
 	mut call_expression := ast.CallExpression{
-		from: from
+		from:      from
 		base:      ast.Identifier{
 			token: p.cur_token.token_type as token.Identifier
 			from:  from
@@ -315,22 +319,7 @@ fn (mut p Process) parse_expression(from string) !ast.Node {
 			return p.parse_factor(from)
 		}
 		token.Identifier {
-			if p.check_next_with_name_token(token.Token{
-				token_type: token.Operator{}
-			})
-			{
-				return p.parse_bin_logical_expression(0, from)
-			} else if p.check_next_token(token.Token{
-				token_type: token.Punctuation{
-					open:  true
-					value: '('
-				}
-			})
-			{
-				return p.parse_call_expression(from)
-			}
-
-			return p.parse_factor(from)
+			return p.parse_bin_logical_expression(0, from)
 		}
 		token.Punctuation {
 			if p.check_next_with_name_token(token.Token{ token_type: token.Numeric{} }) || p.check_next_with_name_token(token.Token{
@@ -443,7 +432,6 @@ fn (mut p Process) parse_loop_statement(from string) !ast.Node {
 		body:      []
 	}
 
-
 	p.eat(token.Token{
 		token_type: token.Punctuation{
 			open:  true
@@ -462,7 +450,6 @@ fn (mut p Process) parse_loop_statement(from string) !ast.Node {
 
 	return loop_statement
 }
-
 
 fn (p &Process) get_first_value_from_node(ast_nodes []ast.Node) !ast.Node {
 	if ast_nodes.len > 0 {
@@ -484,14 +471,13 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 				token_type: token.Operator{
 					value: '?='
 				}
-			})
-			{
+			}) {
 				p.eat_with_name_token(token.Token{
 					token_type: token.Identifier{}
 				})!
 
 				operator_value := p.cur_token.get_value()
-				
+
 				p.eat(token.Token{
 					token_type: token.Operator{
 						value: operator_value
@@ -499,7 +485,7 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 				})!
 
 				return ast.AssignmentStatement{
-					hint: operator_value
+					hint:     operator_value
 					variable: ast.Identifier{
 						token: ident
 						from:  from
@@ -508,12 +494,37 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 				}
 			}
 
-			if ident.reserved == 'if' {
-				return p.parse_if_statement(from)!
-			} else if ident.reserved == 'loop' {
-				return p.parse_loop_statement(from)!
-			} else if ident.reserved == 'function' {
-				return p.parse_function(from)!
+			match ident.reserved {
+				'if' {
+					return p.parse_if_statement(from)
+				}
+				'loop' {
+					return p.parse_loop_statement(from)
+				}
+				'function' {
+					return p.parse_function(from)
+				}
+				'break' {
+					p.eat_with_name_token(token.Token{
+						token_type: token.Identifier{}
+					})!
+					return ast.BreakStatement{}
+				}
+				'continue' {
+					p.eat_with_name_token(token.Token{
+						token_type: token.Identifier{}
+					})!
+					return ast.ContinueStatement{}
+				}
+				'return' {
+					p.eat_with_name_token(token.Token{
+						token_type: token.Identifier{}
+					})!
+					return ast.ReturnStatement{
+						value: p.parse_expression(from)!
+					}
+				}
+				else {}
 			}
 
 			return p.parse_expression(from)!

@@ -37,6 +37,12 @@ enum ProgramState {
 	@none
 	break_
 	continue_
+	return_
+}
+
+struct ProgramStateStore {
+	hint  ProgramState
+	value EvalOutput
 }
 
 struct FunctionStore {
@@ -44,11 +50,38 @@ struct FunctionStore {
 	body       []Node
 }
 
+fn (fs FunctionStore) execute(ce CallExpression, process_id string) !EvalOutput {
+	if fs.parameters.len != ce.arguments.len {
+		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
+			expected: '${fs.parameters.len} parameters for function ${ce.from}.${ce.base.token.value}(${fs.parameters.map(it.token.value).join(', ')})'
+			found:    '${ce.arguments.len} parameters were passed'
+		})
+	}
+
+	for i := 0; i < fs.parameters.len; i++ {
+		fs.parameters[i].set_value(process_id, ce.arguments[i].eval(process_id)!)
+	}
+
+	for val in fs.body {
+		val.eval(process_id)!
+		program_store := program_state_map[process_id]
+		match program_store.hint {
+			.return_ {
+				program_state_map.delete(process_id)
+				return program_store.value
+			}
+			else {}
+		}
+	}
+
+	return 0
+}
+
 __global identifier_value_map = map[string]EvalOutput{}
 
 __global function_value_map = map[string]FunctionStore{}
 
-__global program_state_map = map[string]ProgramState{}
+__global program_state_map = map[string]ProgramStateStore{}
 
 pub interface Node {
 	eval(process_id string) !EvalOutput
@@ -328,14 +361,33 @@ fn (if_statement IfStatement) eval(process_id string) !EvalOutput {
 pub struct BreakStatement {}
 
 fn (br BreakStatement) eval(process_id string) !EvalOutput {
-	program_state_map[process_id] = ProgramState.break_
+	program_state_map[process_id] = ProgramStateStore{
+		hint:  ProgramState.break_
+		value: 0
+	}
+	return 1
+}
+
+pub struct ReturnStatement {
+pub mut:
+	value Node
+}
+
+fn (rt ReturnStatement) eval(process_id string) !EvalOutput {
+	program_state_map[process_id] = ProgramStateStore{
+		hint:  ProgramState.return_
+		value: rt.value.eval(process_id)!
+	}
 	return 1
 }
 
 pub struct ContinueStatement {}
 
 fn (br ContinueStatement) eval(process_id string) !EvalOutput {
-	program_state_map[process_id] = ProgramState.continue_
+	program_state_map[process_id] = ProgramStateStore{
+		hint:  ProgramState.continue_
+		value: 0
+	}
 	return 1
 }
 
@@ -348,8 +400,6 @@ pub mut:
 fn (for_st ForStatement) eval(process_id string) !EvalOutput {
 	new_process_id := gen_process_id(process_id)
 	for {
-		program_state_map.delete(new_process_id)
-
 		if is_condition_met(new_process_id, for_st.condition)! {
 			for st in for_st.body {
 				if new_process_id !in program_state_map {
@@ -359,12 +409,22 @@ fn (for_st ForStatement) eval(process_id string) !EvalOutput {
 				}
 			}
 		} else {
+			program_state_map.delete(new_process_id)
 			break
 		}
 
-		if program_state_map[new_process_id] == ProgramState.break_ {
-			program_state_map.delete(new_process_id)
-			break
+		match program_state_map[new_process_id].hint {
+			.return_ {
+				break
+			}
+			.continue_ {
+				program_state_map.delete(new_process_id)
+			}
+			.break_ {
+				program_state_map.delete(new_process_id)
+				break
+			}
+			.@none {}
 		}
 	}
 
@@ -408,7 +468,7 @@ pub mut:
 }
 
 fn (ce CallExpression) eval(process_id string) !EvalOutput {
-	new_process_id := if process_id != '' { process_id } else { gen_process_id(process_id) }
+	new_process_id := gen_process_id(process_id)
 	match ce.base.token.reserved {
 		'print' {
 			print_reserved_function(new_process_id, ce.arguments, false)!
@@ -427,25 +487,13 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 			return input_reserved_function(new_process_id, ce.arguments[0])
 		}
 		'' {
-			func_val := function_value_map[gen_map_key(ce.from, process_id, ce.base.token.value)] or {
-				return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
-					token: ce.base.token.value
-				})
-			}
-			if func_val.parameters.len != ce.arguments.len {
-				return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
-					expected: '${func_val.parameters.len} parameters for function ${ce.from}.${ce.base.token.value}(${func_val.parameters.map(it.token.value).join(', ')})'
-					found:    '${ce.arguments.len} parameters were passed'
-				})
-			}
-
-			for i := 0; i < func_val.parameters.len; i++ {
-				func_val.parameters[i].set_value(new_process_id, ce.arguments[i].eval(new_process_id)!)
-			}
-
-			for val in func_val.body {
-				val.eval(new_process_id)!
-			}
+			return function_value_map[gen_map_key(ce.from, process_id, ce.base.token.value)] or {
+				return function_value_map[gen_map_key(ce.from, '', ce.base.token.value)] or {
+					return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
+						token: ce.base.token.value
+					})
+				}.execute(ce, new_process_id)
+			}.execute(ce, new_process_id)
 		}
 		else {
 			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
