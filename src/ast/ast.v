@@ -21,8 +21,16 @@ pub fn (evl EvalOutput) is_empty() bool {
 	}
 }
 
-pub fn gen_process_id() string {
-	return rand.ascii(14)
+fn gen_process_id(process_id string) string {
+	return if process_id != '' { process_id } else { rand.ascii(14) }
+}
+
+fn gen_map_key(from string, process_id string, value string) string {
+	return '${from}${if process_id != '' {
+		'.' + process_id
+	} else {
+		''
+	}}.${value}'
 }
 
 enum ProgramState {
@@ -31,9 +39,14 @@ enum ProgramState {
 	continue_
 }
 
+struct FunctionStore {
+	parameters []Identifier
+	body       []Node
+}
 
 __global identifier_value_map = map[string]EvalOutput{}
 
+__global function_value_map = map[string]FunctionStore{}
 
 __global program_state_map = map[string]ProgramState{}
 
@@ -192,11 +205,7 @@ pub mut:
 }
 
 fn (i Identifier) eval(process_id string) !EvalOutput {
-	return identifier_value_map['${i.from}${if process_id != '' {
-		'.' + process_id
-	} else {
-		''
-	}}.${i.token.value}'] or {
+	return identifier_value_map[gen_map_key(i.from, process_id, i.token.value)] or {
 		if process_id != '' && '${i.from}.${i.token.value}' in identifier_value_map {
 			unsafe {
 				return identifier_value_map['${i.from}.${i.token.value}']
@@ -208,16 +217,8 @@ fn (i Identifier) eval(process_id string) !EvalOutput {
 }
 
 fn (i Identifier) set_value(process_id string, output EvalOutput) {
-	if '${i.from}${if process_id != '' {
-		'.' + process_id
-	} else {
-		''
-	}}.${i.token.value}' in identifier_value_map {
-		identifier_value_map['${i.from}${if process_id != '' {
-			'.' + process_id
-		} else {
-			''
-		}}.${i.token.value}'] = output
+	if gen_map_key(i.from, process_id, i.token.value) in identifier_value_map {
+		identifier_value_map[gen_map_key(i.from, process_id, i.token.value)] = output
 		return
 	}
 
@@ -226,11 +227,7 @@ fn (i Identifier) set_value(process_id string, output EvalOutput) {
 		return
 	}
 
-	identifier_value_map['${i.from}${if process_id != '' {
-		'.' + process_id
-	} else {
-		''
-	}}.${i.token.value}'] = output
+	identifier_value_map[gen_map_key(i.from, process_id, i.token.value)] = output
 }
 
 pub struct AssignmentStatement {
@@ -349,7 +346,7 @@ pub mut:
 }
 
 fn (for_st ForStatement) eval(process_id string) !EvalOutput {
-	new_process_id := gen_process_id()
+	new_process_id := gen_process_id(process_id)
 	for {
 		program_state_map.delete(new_process_id)
 
@@ -374,7 +371,34 @@ fn (for_st ForStatement) eval(process_id string) !EvalOutput {
 	return 0
 }
 
+pub struct FunctionDeclaration {
+pub mut:
+	from       string @[required]
+	name       Identifier
+	parameters []Identifier
+	body       []Node
+}
 
+fn (fd FunctionDeclaration) eval(process_id string) !EvalOutput {
+	if fd.name.token.reserved != '' {
+		return error_gen('eval', 'function_declaration', errors_df.ErrorTryingToUseReservedIdentifier{
+			identifier: fd.name.token.value
+		})
+	}
+
+	if '${fd.from}.${fd.name}' in function_value_map {
+		return error_gen('eval', 'function_declaration', errors_df.ErrorFunctionAlreadyDeclared{
+			function_name: '${fd.name.token.value}'
+		})
+	}
+
+	function_value_map[gen_map_key(fd.from, process_id, fd.name.token.value)] = FunctionStore{
+		parameters: fd.parameters
+		body:       fd.body
+	}
+
+	return 1
+}
 
 pub struct CallExpression {
 pub mut:
@@ -384,7 +408,7 @@ pub mut:
 }
 
 fn (ce CallExpression) eval(process_id string) !EvalOutput {
-	new_process_id := gen_process_id()
+	new_process_id := if process_id != '' { process_id } else { gen_process_id(process_id) }
 	match ce.base.token.reserved {
 		'print' {
 			print_reserved_function(new_process_id, ce.arguments, false)!
@@ -401,6 +425,27 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 				})
 			}
 			return input_reserved_function(new_process_id, ce.arguments[0])
+		}
+		'' {
+			func_val := function_value_map[gen_map_key(ce.from, process_id, ce.base.token.value)] or {
+				return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
+					token: ce.base.token.value
+				})
+			}
+			if func_val.parameters.len != ce.arguments.len {
+				return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
+					expected: '${func_val.parameters.len} parameters for function ${ce.from}.${ce.base.token.value}(${func_val.parameters.map(it.token.value).join(', ')})'
+					found:    '${ce.arguments.len} parameters were passed'
+				})
+			}
+
+			for i := 0; i < func_val.parameters.len; i++ {
+				func_val.parameters[i].set_value(new_process_id, ce.arguments[i].eval(new_process_id)!)
+			}
+
+			for val in func_val.body {
+				val.eval(new_process_id)!
+			}
 		}
 		else {
 			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
