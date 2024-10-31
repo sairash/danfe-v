@@ -41,10 +41,13 @@ fn gen_error_start_keyword(while_when string, path string, cur_line int, cur_col
 	return '\n\n${cli_df.double_underline}${gen_letter(' ', while_when.len + 23)}${cli_df.reset}\n${cli_df.red}Error${cli_df.reset} Encountered when ${cli_df.bold}${while_when}${cli_df.reset}: \n${cli_df.underline}${path}:${cur_line}:${cur_col}${cli_df.reset}: '
 }
 
-pub struct ErrorFileIO {}
+pub struct ErrorFileIO {
+	pub mut:
+	file_path string @[required]
+}
 
 fn (err ErrorFileIO) output() string {
-	return 'Failed to open path.'
+	return 'Failed to open path. path: ${err.file_path}'
 }
 
 pub struct ErrorMismatch {
