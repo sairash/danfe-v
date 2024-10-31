@@ -11,6 +11,11 @@ pub fn format_path(input_str string) string {
 	if !result.ends_with('.df') {
 		result += '.df'
 	}
+
+	if !result.contains('/') {
+        result = './' + result
+    }
+
 	return result
 }
 
@@ -117,33 +122,54 @@ fn (mut p Parse) parse_function() !ast.Node {
 	return ret_func
 }
 
-fn resolve_absolute_path(base_path string, relative string) string {
-	relative_path := format_path(relative)
-	if relative_path.starts_with('/') {
-		return relative_path
-	}
+pub fn resolve_absolute_path(base_path string, relative_path_old string) string {
+	relative_path := format_path(relative_path_old)
+    if relative_path.starts_with('/') {
+        return relative_path
+    }
 
-	mut base_components := base_path.trim_string_left('/').split('/')
-	relative_components := relative_path.split('/')
+    base_dir := if base_path.contains('.') {
+        base_path.all_before_last('/')
+    } else {
+        base_path
+    }
 
-	mut result_components := base_components.clone()
+    mut base_components := base_dir.trim_string_left('/').split('/')
+    relative_components := relative_path.split('/')
 
-	for component in relative_components {
-		match component {
-			'.' {} // Skip current directory marker
-			'..' { // Go up one directory
-				if result_components.len > 0 {
-					result_components.delete_last()
-				}
-			}
-			'' {} // Skip empty components
-			else {
-				result_components << component
-			}
-		}
-	}
+    mut result_components := base_components.clone()
 
-	return '/' + result_components.join('/')
+    for i := 0; i < relative_components.len - 1; i++ {
+        component := relative_components[i]
+        match component {
+            '.' {}  
+            '..' { 
+                if result_components.len > 0 {
+                    result_components.delete_last()
+                }
+            }
+            '' {} 
+            else {
+                result_components << component
+            }
+        }
+    }
+
+    last_component := relative_components.last()
+    match last_component {
+        '.' {}
+        '..' {
+            if result_components.len > 0 {
+                result_components.delete_last()
+            }
+        }
+        '' {}
+        else {
+            result_components << last_component
+        }
+    }
+
+    return '/' + result_components.join('/')
 }
 
 fn (p Parse) strip_filename(path string) !string {
@@ -155,7 +181,9 @@ fn (p Parse) strip_filename(path string) !string {
 	}
 
 	return error(errors_df.gen_custom_error_message('parsing', 'file_name', p.lex.file_path,
-		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorFileIO{}))
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorFileIO{
+			file_path: path
+		}))
 }
 
 fn (mut p Parse) parse_import_statement() !ast.Node {
