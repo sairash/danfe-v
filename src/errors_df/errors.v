@@ -66,6 +66,22 @@ fn (err ErrorImportPlacement) output() string {
 	return 'The Placement of "import" should be at the start of the file before any other operation.'
 }
 
+pub struct ErrorImportTryingToCallSelf {}
+
+fn (err ErrorImportTryingToCallSelf) output() string {
+	return 'Trying to "import" self from self.'
+}
+
+pub struct ErrorImportCycleDetected{
+	pub mut:
+	from_file string
+	detected_file string
+}
+
+fn (err ErrorImportCycleDetected) output() string {
+	return 'Import Cycle Detected. From: ${err.from_file}, Detected: ${err.detected_file}'
+}
+
 
 pub struct ErrorUnexpectedToken {
 pub mut:

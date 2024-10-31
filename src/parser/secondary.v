@@ -188,10 +188,8 @@ fn (p Parse) strip_filename(path string) !string {
 
 fn (mut p Parse) parse_import_statement() !ast.Node {
 	if !p.lex.can_import {
-
-		println(p.ast)
-		return error(errors_df.gen_custom_error_message('parsing', 'import_placement', p.lex.file_path,
-			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorImportPlacement{}))
+		return error(errors_df.gen_custom_error_message('parsing', 'import_placement',
+			p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorImportPlacement{}))
 	}
 	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 
@@ -208,6 +206,11 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 		from_path:    p.cur_file
 		from_module_: p.module_
 		path:         resolve_absolute_path(p.cur_file, (p.parse_factor()! as ast.Litreal).value)
+	}
+
+	if import_statement.from_path == import_statement.path {
+		return error(errors_df.gen_custom_error_message('parsing', 'import_self', p.lex.file_path,
+			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorImportTryingToCallSelf{}))
 	}
 
 	if !p.check_current_identifier_reserved('as') {
