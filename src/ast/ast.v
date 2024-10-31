@@ -59,7 +59,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id string) !EvalOutput 
 	}
 
 	for i := 0; i < fs.parameters.len; i++ {
-		fs.parameters[i].set_value(process_id, ce.arguments[i].eval(process_id)!)
+		fs.parameters[i].set_value(process_id, ce.arguments[i].eval(process_id)!, true)
 	}
 
 	for val in fs.body {
@@ -147,7 +147,7 @@ fn (li Litreal) eval(process_id string) !EvalOutput {
 			return EvalOutput(li.value.int())
 		}
 		.floating_point {
-			return EvalOutput(strconv.atof_quick(li.value))
+			return EvalOutput(strconv.atof64(li.value)!)
 		}
 		.str {
 			return li.value
@@ -273,8 +273,8 @@ fn (i Identifier) eval(process_id string) !EvalOutput {
 	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
-fn (i Identifier) set_value(process_id string, output EvalOutput) {
-	if gen_map_key(i.from, process_id, i.token.value) in identifier_value_map {
+fn (i Identifier) set_value(process_id string, output EvalOutput, force bool) {
+	if gen_map_key(i.from, process_id, i.token.value) in identifier_value_map || force {
 		identifier_value_map[gen_map_key(i.from, process_id, i.token.value)] = output
 		return
 	}
@@ -315,7 +315,7 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 		}
 	}
 
-	asss.variable.set_value(process_id, asss.init.eval(process_id)!)
+	asss.variable.set_value(process_id, asss.init.eval(process_id)!, false)
 	return 1
 }
 

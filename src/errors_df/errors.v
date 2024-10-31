@@ -66,6 +66,16 @@ fn (err ErrorImportPlacement) output() string {
 	return 'The Placement of "import" should be at the start of the file before any other operation.'
 }
 
+pub struct ErrorDotCantBeEndOfIdent {
+	pub mut:
+	token string
+}
+
+fn (err ErrorDotCantBeEndOfIdent) output() string {
+	return '"." can\'t be the end of the identifier: ${err.token}'
+}
+
+
 pub struct ErrorImportTryingToCallSelf {}
 
 fn (err ErrorImportTryingToCallSelf) output() string {

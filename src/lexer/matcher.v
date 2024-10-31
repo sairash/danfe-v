@@ -161,8 +161,7 @@ fn (mut l Lex) match_reserved_symbols(identifier string) token.Token {
 		}
 	}
 
-	
-	if ret_ident.reserved != "import"  && ret_ident.reserved != "as" {
+	if ret_ident.reserved != 'import' && ret_ident.reserved != 'as' {
 		l.can_import = false
 	}
 
@@ -205,7 +204,7 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 					return_string += '\t'
 				}
 				else {
-					return_string += '\\${consume.ascii_str()}'
+					return_string += consume.ascii_str()
 				}
 			}
 		} else {
@@ -227,7 +226,7 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 	for {
 		peek := l.peek() or { break }
 
-		if peek.is_letter() || peek.is_digit() || peek == `_` {
+		if peek.is_letter() || peek.is_digit() || peek == `_` || peek == `.` {
 			return_str += peek.ascii_str()
 			l.consume_char()
 		} else {
@@ -243,6 +242,12 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 			free(return_str)
 			free(start_index)
 		}
+	}
+
+	if return_str[return_str.len - 1] == `.` {
+		return l.error_generator('match identifier', errors_df.ErrorDotCantBeEndOfIdent{
+			token: return_str
+		})
 	}
 
 	mut new_token := l.match_reserved_symbols(return_str)

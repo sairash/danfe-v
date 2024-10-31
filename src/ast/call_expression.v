@@ -1,6 +1,6 @@
 module ast
 
-import readline { read_line }
+import os
 
 fn print_reserved_function(process_id string, args []Node, new_line bool) ! {
 	for arg in args {
@@ -11,10 +11,10 @@ fn print_reserved_function(process_id string, args []Node, new_line bool) ! {
 			int, f64 { eval_output.str() }
 		}
 
-		print("${output_str}")
+		print('${output_str}')
 	}
-	if new_line{
-		print("\n")
+	if new_line {
+		print('\n')
 	}
 }
 
@@ -26,5 +26,6 @@ fn input_reserved_function(process_id string, arg Node) !EvalOutput {
 		int, f64 { eval_output.str() }
 	}
 
-	return read_line(output_str)!
+	print(output_str)
+	return os.get_line()
 }
