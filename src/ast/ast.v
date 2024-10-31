@@ -53,7 +53,7 @@ struct FunctionStore {
 fn (fs FunctionStore) execute(ce CallExpression, process_id string) !EvalOutput {
 	if fs.parameters.len != ce.arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
-			expected: '${fs.parameters.len} parameters for function ${ce.from}.${ce.base.token.value}(${fs.parameters.map(it.token.value).join(', ')})'
+			expected: '${fs.parameters.len} parameters for function ${ce.base.from}.${ce.base.token.value}(${fs.parameters.map(it.token.value).join(', ')})'
 			found:    '${ce.arguments.len} parameters were passed'
 		})
 	}
@@ -229,6 +229,19 @@ fn (lo Logical) eval(process_id string) !EvalOutput {
 	return error_gen('eval', 'logical', errors_df.ErrorUnexpectedToken{
 		token: lo.operator
 	})
+}
+
+pub struct ImportStatement {
+pub mut:
+	path string
+	module_ string
+	from_path  string // path of parent
+	from_module_  string
+}
+
+fn (im ImportStatement) eval(process_id string) !EvalOutput {
+	return '${im.from_module_}.${im.module_}'
+	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
 pub struct Identifier {
@@ -433,7 +446,6 @@ fn (for_st ForStatement) eval(process_id string) !EvalOutput {
 
 pub struct FunctionDeclaration {
 pub mut:
-	from       string @[required]
 	name       Identifier
 	parameters []Identifier
 	body       []Node
@@ -446,13 +458,13 @@ fn (fd FunctionDeclaration) eval(process_id string) !EvalOutput {
 		})
 	}
 
-	if '${fd.from}.${fd.name}' in function_value_map {
+	if '${fd.name.from}.${fd.name}' in function_value_map {
 		return error_gen('eval', 'function_declaration', errors_df.ErrorFunctionAlreadyDeclared{
 			function_name: '${fd.name.token.value}'
 		})
 	}
 
-	function_value_map[gen_map_key(fd.from, process_id, fd.name.token.value)] = FunctionStore{
+	function_value_map[gen_map_key(fd.name.from, process_id, fd.name.token.value)] = FunctionStore{
 		parameters: fd.parameters
 		body:       fd.body
 	}
@@ -462,7 +474,6 @@ fn (fd FunctionDeclaration) eval(process_id string) !EvalOutput {
 
 pub struct CallExpression {
 pub mut:
-	from      string @[required]
 	base      Identifier
 	arguments []Node
 }
@@ -487,8 +498,8 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 			return input_reserved_function(new_process_id, ce.arguments[0])
 		}
 		'' {
-			return function_value_map[gen_map_key(ce.from, process_id, ce.base.token.value)] or {
-				return function_value_map[gen_map_key(ce.from, '', ce.base.token.value)] or {
+			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {
+				return function_value_map[gen_map_key(ce.base.from, '', ce.base.token.value)] or {
 					return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
 						token: ce.base.token.value
 					})
