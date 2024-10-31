@@ -45,7 +45,7 @@ pub fn (mut l Lex) next() !token.Token {
 // convert the given u8 to token type
 fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 	match next_char {
-		`\n` {
+		`\n`, `;` {
 			return token.Token{
 				token_type: token.EOL{}
 				range:      [l.get_x()]
@@ -59,7 +59,7 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 			l.can_import = false
 			return l.match_punctuation(next_char, false)
 		}
-		`;`, `,` {
+		`,` {
 			l.can_import = false
 			return token.Token{
 				token_type: token.Seperator{
