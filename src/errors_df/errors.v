@@ -66,6 +66,15 @@ fn (err ErrorUnexpectedToken) output() string {
 	return 'There was an unexpected token: ${err.token}'
 }
 
+pub struct ErrorCantFindExpectedToken {
+pub mut:
+	token string
+}
+
+fn (err ErrorCantFindExpectedToken) output() string {
+	return 'Was Expecting: ${err.token}'
+}
+
 pub struct ErrorUseOfMultipleFloatPoints {}
 
 fn (err ErrorUseOfMultipleFloatPoints) output() string {
@@ -176,6 +185,15 @@ pub mut:
 
 fn (err ErrorTryingToUseReservedIdentifier) output() string {
 	return 'The "${err.identifier}" identifier is reserved by Danfe and user programs cannot assign value to to it.'
+}
+
+pub struct ErrorFunctionAlreadyDeclared {
+pub mut:
+	function_name string
+}
+
+fn (err ErrorFunctionAlreadyDeclared) output() string {
+	return 'You have already declared a function named "${err.function_name}"'
 }
 
 pub struct ErrorMissingParenthesis {

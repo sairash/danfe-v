@@ -512,7 +512,9 @@ fn (mut p Process) parse_identifier(from string) !ast.Node {
 				return p.parse_if_statement(from)!
 			} else if ident.reserved == 'loop' {
 				return p.parse_loop_statement(from)!
-			} 
+			} else if ident.reserved == 'function' {
+				return p.parse_function(from)!
+			}
 
 			return p.parse_expression(from)!
 		}
