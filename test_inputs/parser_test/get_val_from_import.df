@@ -1,0 +1,7 @@
+import "get_val_from_import_inner"
+
+println("")
+println("Updating from Parent file: ")
+get_val_from_import_inner.function_declaration.y = "Sairash Sharma"
+get_val_from_import_inner.function_declaration.green = "\e[32m"
+get_val_from_import_inner.function_declaration.outer(get_val_from_import_inner.function_declaration.y, get_val_from_import_inner.function_declaration.green)

@@ -5,4 +5,7 @@ y = x + 5
 x ?= 10
 y ?= 4
 
-println(x," ", y, " ", x * y)
+
+if __module__ == "name" {
+    println(x," ", y, " ", x * y)
+}
