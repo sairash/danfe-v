@@ -83,6 +83,17 @@ __global function_value_map = map[string]FunctionStore{}
 
 __global program_state_map = map[string]ProgramStateStore{}
 
+
+pub fn set_if_module_not_already_init(full_module_ string,  module_ string) bool {
+	if "${full_module_}.__module__" in identifier_value_map {
+		return false
+	}
+
+	identifier_value_map["${full_module_}.__module__"] = module_
+	
+	return true
+}
+
 pub interface Node {
 	eval(process_id string) !EvalOutput
 }
