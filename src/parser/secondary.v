@@ -13,8 +13,8 @@ pub fn format_path(input_str string) string {
 	}
 
 	if !result.contains('/') {
-        result = './' + result
-    }
+		result = './' + result
+	}
 
 	return result
 }
@@ -124,52 +124,52 @@ fn (mut p Parse) parse_function() !ast.Node {
 
 pub fn resolve_absolute_path(base_path string, relative_path_old string) string {
 	relative_path := format_path(relative_path_old)
-    if relative_path.starts_with('/') {
-        return relative_path
-    }
+	if relative_path.starts_with('/') {
+		return relative_path
+	}
 
-    base_dir := if base_path.contains('.') {
-        base_path.all_before_last('/')
-    } else {
-        base_path
-    }
+	base_dir := if base_path.contains('.') {
+		base_path.all_before_last('/')
+	} else {
+		base_path
+	}
 
-    mut base_components := base_dir.trim_string_left('/').split('/')
-    relative_components := relative_path.split('/')
+	mut base_components := base_dir.trim_string_left('/').split('/')
+	relative_components := relative_path.split('/')
 
-    mut result_components := base_components.clone()
+	mut result_components := base_components.clone()
 
-    for i := 0; i < relative_components.len - 1; i++ {
-        component := relative_components[i]
-        match component {
-            '.' {}  
-            '..' { 
-                if result_components.len > 0 {
-                    result_components.delete_last()
-                }
-            }
-            '' {} 
-            else {
-                result_components << component
-            }
-        }
-    }
+	for i := 0; i < relative_components.len - 1; i++ {
+		component := relative_components[i]
+		match component {
+			'.' {}
+			'..' {
+				if result_components.len > 0 {
+					result_components.delete_last()
+				}
+			}
+			'' {}
+			else {
+				result_components << component
+			}
+		}
+	}
 
-    last_component := relative_components.last()
-    match last_component {
-        '.' {}
-        '..' {
-            if result_components.len > 0 {
-                result_components.delete_last()
-            }
-        }
-        '' {}
-        else {
-            result_components << last_component
-        }
-    }
+	last_component := relative_components.last()
+	match last_component {
+		'.' {}
+		'..' {
+			if result_components.len > 0 {
+				result_components.delete_last()
+			}
+		}
+		'' {}
+		else {
+			result_components << last_component
+		}
+	}
 
-    return '/' + result_components.join('/')
+	return '/' + result_components.join('/')
 }
 
 fn (p Parse) strip_filename(path string) !string {
@@ -182,11 +182,17 @@ fn (p Parse) strip_filename(path string) !string {
 
 	return error(errors_df.gen_custom_error_message('parsing', 'file_name', p.lex.file_path,
 		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorFileIO{
-			file_path: path
-		}))
+		file_path: path
+	}))
 }
 
 fn (mut p Parse) parse_import_statement() !ast.Node {
+	if !p.lex.can_import {
+
+		println(p.ast)
+		return error(errors_df.gen_custom_error_message('parsing', 'import_placement', p.lex.file_path,
+			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorImportPlacement{}))
+	}
 	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 
 	if !p.check_token_with_name(token.Token{
