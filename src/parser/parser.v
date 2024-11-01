@@ -46,6 +46,10 @@ fn (mut p Parse) eat_with_name_token(expected token.Token) ! {
 	p.next()!
 }
 
+fn (p &Parse) check_prev_token(expected token.Token) bool {
+	return p.prev_token.token_type == expected.token_type
+}
+
 fn (p &Parse) check_token(expected token.Token) bool {
 	return p.cur_token.token_type == expected.token_type
 }
@@ -146,7 +150,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 		token.VBlock {
 			return ast.VBlock{
 				v_code: p.cur_token.get_value()
-				from: p.module_
+				from:   p.module_
 			}
 		}
 		token.Numeric {
@@ -273,6 +277,18 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 					}
 				})
 				{
+					if p.check_prev_token(token.Token{
+						token_type: token.Seperator{
+							value: ','
+						}
+					})
+					{
+						return error(errors_df.gen_custom_error_message('parsing', 'call_exp',
+							p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCannotUseTokenIfBefore{
+							having:  ','
+							token: ')'
+						}))
+					}
 					p.eat(token.Token{
 						token_type: token.Punctuation{
 							open:  false
@@ -285,6 +301,7 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 			}
 			else {}
 		}
+
 		call_expression.arguments << p.parse_expression()!
 
 		p.eat(token.Token{
