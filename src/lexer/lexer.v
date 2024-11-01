@@ -130,6 +130,11 @@ fn (l &Lex) get_x() i64 {
 	return l.x - 1
 }
 
+fn (mut l Lex) skip_till(till int) {
+	l.x = till
+}
+
+
 // Peek current character
 fn (l &Lex) peek() ?u8 {
 	if l.x < l.file_len {
