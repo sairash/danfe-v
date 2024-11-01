@@ -1,0 +1,16 @@
+
+y = [
+    "test"=> "hello"
+    "sairash"=> "gautam"
+    
+    "test_multi_dim" => [
+        "test", "dim"
+    ]
+]
+
+
+x = []
+
+
+println("Y: ",y)
+println("X: ",x)
