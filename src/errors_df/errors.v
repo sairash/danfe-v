@@ -146,6 +146,17 @@ fn (err ErrorNeededAfterInit) output() string {
 }
 
 
+pub struct ErrorCannotUseTokenIfBefore {
+	pub mut:
+	token string
+	having string
+}
+
+fn (err ErrorCannotUseTokenIfBefore) output() string {
+	return 'Use of "${err.having}" is not allowed before "${err.token}"'
+}
+
+
 pub struct ErrorUnexpected {}
 
 fn (err ErrorUnexpected) output() string {
