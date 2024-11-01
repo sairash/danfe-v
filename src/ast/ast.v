@@ -4,6 +4,8 @@ import token
 import strconv
 import errors_df
 import rand
+import grammer
+import os
 
 type EvalOutput = string | int | f64
 
@@ -21,6 +23,16 @@ pub fn (evl EvalOutput) is_empty() bool {
 	}
 }
 
+pub fn (evl EvalOutput) get_as_string() string {
+	output_str := match evl {
+		string { evl }
+		int, f64 { evl.str() }
+	}
+
+	return output_str
+}
+
+
 fn gen_process_id(process_id string) string {
 	return if process_id != '' { process_id } else { rand.ascii(14) }
 }
@@ -31,6 +43,67 @@ fn gen_map_key(from string, process_id string, value string) string {
 	} else {
 		''
 	}}.${value}'
+}
+
+fn match_identifier_with_reserved(identifier string, from string) Identifier {
+	mut ret_ident := token.Identifier{
+		value: identifier
+		reserved: ''
+	}
+
+	for key, value in grammer.reserved_symbols {
+		if identifier == key || identifier in value {
+			ret_ident.reserved = key
+		}
+	}
+
+	return Identifier{token: ret_ident, from: from}
+}
+
+fn remove_space(string_value string) string {
+	return string_value.replace(' ', '').replace('\n', '').replace('\t', '') 
+}
+
+fn replace_identifier_in_string(string_value string, from string, process_id string) !string {
+	mut ret_string := ""
+	mut start_index := 0
+	mut cur_index := 0
+	mut last_index := 0
+	for {
+		cur_index = string_value.index_after('%i{', cur_index)
+
+		if cur_index == -1 {
+			break
+		}
+
+		last_index = string_value.index_after('}', cur_index)
+
+		if last_index == -1 {
+			return error_gen('eval', 'replace_with_ident', errors_df.ErrorNeededAfterInit{
+				init_token:     '%i{'
+				expected_token: '}'
+			})
+		}
+
+		ident := match_identifier_with_reserved(remove_space(string_value[cur_index+3 .. last_index]), from)
+
+		if ident.token.reserved != '' {
+			return error_gen('eval', 'replace_with_ident', errors_df.ErrorOnlyAllowed{
+				value:     '"identifer" cannot use "Reserved Key" "${ident.token.value}"'
+			})
+		}
+
+
+		ret_string += string_value[start_index..cur_index] + "${ident.eval(process_id)!.get_as_string()}"
+
+
+		cur_index = last_index + 1
+		start_index = cur_index
+
+	}
+
+	ret_string += string_value[start_index..string_value.len -1]
+	return ret_string
 }
 
 enum ProgramState {
@@ -83,14 +156,13 @@ __global function_value_map = map[string]FunctionStore{}
 
 __global program_state_map = map[string]ProgramStateStore{}
 
-
-pub fn set_if_module_not_already_init(full_module_ string,  module_ string) bool {
-	if "${full_module_}.__module__" in identifier_value_map {
+pub fn set_if_module_not_already_init(full_module_ string, module_ string) bool {
+	if '${full_module_}.__module__' in identifier_value_map {
 		return false
 	}
 
-	identifier_value_map["${full_module_}.__module__"] = module_
-	
+	identifier_value_map['${full_module_}.__module__'] = module_
+
 	return true
 }
 
@@ -242,17 +314,41 @@ fn (lo Logical) eval(process_id string) !EvalOutput {
 	})
 }
 
+pub struct VBlock {
+pub mut:
+	v_code string
+	from string
+}
+
+fn (vb VBlock) eval(process_id string) !EvalOutput {
+	mut ret_val := ''
+
+	mut cmd := os.Command{
+		path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace("return(", "println(")}\''
+	}
+
+	cmd.start()!
+	for !cmd.eof {
+		line := cmd.read_line()
+		if line != '' {
+			ret_val += line
+		}
+	}
+	cmd.close()!
+
+	return ret_val
+}
+
 pub struct ImportStatement {
 pub mut:
-	path string
-	module_ string
-	from_path  string // path of parent
-	from_module_  string
+	path         string
+	module_      string
+	from_path    string // path of parent
+	from_module_ string
 }
 
 fn (im ImportStatement) eval(process_id string) !EvalOutput {
 	return '${im.from_module_}.${im.module_}'
-	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 
 pub struct Identifier {
