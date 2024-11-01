@@ -1,0 +1,18 @@
+hello = 10
+
+create_file = v {
+    return("returning from v with value %i{hello}")
+} endv
+
+
+println(create_file)
+create_file = create_file + " which can be updated!"
+println(create_file)
+
+
+random_text_gen = v {
+    import rand
+    return(rand.ascii(%i{hello}))
+} endv
+
+println(random_text_gen)
