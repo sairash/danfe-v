@@ -150,7 +150,7 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	}
 }
 
-fn (mut l Lex) match_reserved_symbols(identifier string) token.Token {
+fn (mut l Lex) match_reserved_symbols(identifier string) !token.Token {
 	mut ret_ident := token.Identifier{
 		value:    identifier
 		reserved: ''
@@ -163,6 +163,47 @@ fn (mut l Lex) match_reserved_symbols(identifier string) token.Token {
 
 	if ret_ident.reserved != 'import' && ret_ident.reserved != 'as' {
 		l.can_import = false
+	}
+
+	if ret_ident.reserved == 'v' {
+		l.skip_whitespace() or {
+			return l.error_generator('v block', errors_df.ErrorMismatch{'{', 'EOF'})
+		}
+
+		next_token := l.peek() or {
+			return l.error_generator('v block', errors_df.ErrorMismatch{
+				expected: '{'
+				found:    'EOF'
+			})
+		}
+
+		if next_token != `{` {
+			return l.error_generator('v block', errors_df.ErrorMismatch{
+				expected: '{'
+				found:    next_token.ascii_str()
+			})
+		}
+
+		curr_token_position := l.x
+		next_index := l.file_data.index_after('} endv', int(l.x))
+
+		if next_index == -1 {
+			return l.error_generator('v block', errors_df.ErrorCantFindExpectedToken{
+				token: 'token "} end"'
+			})
+		} 
+
+		value_v_block := l.file_data[curr_token_position+1..next_index]
+
+		l.skip_till(next_index + 6)
+
+		return token.Token{
+			token_type: token.VBlock{
+				value_v_block
+			}
+			range: [curr_token_position, next_index+6]
+		}
+
 	}
 
 	return token.Token{
@@ -250,7 +291,7 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 		})
 	}
 
-	mut new_token := l.match_reserved_symbols(return_str)
+	mut new_token := l.match_reserved_symbols(return_str)!
 	new_token.range = [start_index, l.get_x()]
 	defer {
 		unsafe {
