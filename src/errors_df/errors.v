@@ -117,11 +117,34 @@ fn (err ErrorUseOfMultipleFloatPoints) output() string {
 	return 'Attempting the use of multiple floating points "." in number.'
 }
 
+
+pub struct ErrorOnlyAllowed {
+	pub mut:
+	value string
+}
+
+fn (err ErrorOnlyAllowed) output() string {
+	return 'Only allowed ${err.value}'
+}
+
+
 pub struct ErrorUnexpectedEOF {}
 
 fn (err ErrorUnexpectedEOF) output() string {
 	return 'Unexpected End of File'
 }
+
+
+pub struct ErrorNeededAfterInit {
+	pub mut:
+	init_token string
+	expected_token string
+}
+
+fn (err ErrorNeededAfterInit) output() string {
+	return 'After initializing with "${err.init_token}" an ending token "${err.expected_token} is required."'
+}
+
 
 pub struct ErrorUnexpected {}
 
