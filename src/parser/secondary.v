@@ -61,8 +61,8 @@ fn (mut p Parse) parse_function() !ast.Node {
 					{
 						return error(errors_df.gen_custom_error_message('parsing', 'function_declaration',
 							p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCannotUseTokenIfBefore{
-							having:  ','
-							token: ')'
+							having: ','
+							token:  ')'
 						}))
 					}
 					p.eat(token.Token{
@@ -241,4 +241,258 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 	}
 
 	return import_statement
+}
+
+fn (mut p Parse) parse_index_expression() !ast.Node {
+	
+	mut index_exp := ast.IndexExpression{
+		base:   ast.Identifier{
+			token: p.cur_token.token_type as token.Identifier
+			from:  p.module_
+		}
+		indexs: []
+	}
+
+	p.eat_with_name_token(token.Token{
+		token_type: token.Identifier{}
+	})!
+
+	for {
+		if !p.check_token(token.Token{
+			token_type: token.Punctuation{
+				open:  true
+				value: '['
+			}
+		}) {
+			break
+		}
+
+		p.eat(token.Token{
+			token_type: token.Punctuation{
+				open:  true
+				value: '['
+			}
+		})!
+
+		index_exp.indexs << p.parse_expression()!
+
+		p.eat(token.Token{
+			token_type: token.Punctuation{
+				open:  false
+				value: ']'
+			}
+		})!
+	}
+
+	
+	return index_exp
+}
+
+fn (mut p Parse) parse_table_constructor_expression() ![]ast.Node {
+	mut ret_node := []ast.Node{}
+	for {
+		for p.cur_token.get_value() == "EOL" {
+			p.eat(token.Token{
+				token_type: token.EOL{}
+			})!
+		}
+		if p.check_token(token.Token{
+			token_type: token.Punctuation{
+				open:  false
+				value: ']'
+			}
+		})
+		{
+			break
+		}
+		
+		parsed_exp := p.parse_expression()!
+
+		if p.check_token(token.Token{
+			token_type: token.Operator{
+				value: '=>'
+			}
+		})
+		{
+			p.eat(token.Token{
+				token_type: token.Operator{
+					value: '=>'
+				}
+			})!
+
+			match parsed_exp {
+				ast.Litreal {
+					ret_node << ast.TableKey{
+						key:   parsed_exp
+						value: p.parse_expression()!
+					}
+				}
+				else {
+					return error(errors_df.gen_custom_error_message('parsing', 'key_constructor',
+						p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorTableKeyCannotBeOtherThanLitreal{}))
+				}
+			}
+		} else {
+			ret_node << parsed_exp
+		}
+
+		p.eat(token.Token{
+			token_type: token.Seperator{
+				value: ','
+			}
+		}) or {}
+	}
+
+	return ret_node
+}
+
+fn (mut p Parse) parse_factor() !ast.Node {
+	match p.cur_token.token_type {
+		token.String {
+			x := p.cur_token.token_type as token.String
+
+			p.eat(token.Token{
+				token_type: token.String{
+					value: x.value
+				}
+			})!
+
+			return ast.Litreal{
+				hint:  ast.LitrealType.str
+				value: x.value
+			}
+		}
+		token.Identifier {
+			if p.check_next_token(token.Token{
+				token_type: token.Punctuation{
+					open:  true
+					value: '('
+				}
+			})
+			{
+				return p.parse_call_expression()
+			}
+
+			if p.check_next_token(token.Token{
+				token_type: token.Punctuation{
+					open:  true
+					value: '['
+				}
+			})
+			{
+
+				return p.parse_index_expression()
+			}
+
+			x := p.cur_token.token_type as token.Identifier
+
+			p.eat(token.Token{
+				token_type: token.Identifier{
+					value:    x.value
+					reserved: x.reserved
+				}
+			})!
+
+			match x.reserved {
+				'true', 'false' {
+					return ast.Litreal{
+						hint:  ast.LitrealType.boolean
+						value: x.reserved
+					}
+				}
+				'nil' {
+					return ast.Litreal{
+						hint:  ast.LitrealType.null
+						value: x.reserved
+					}
+				}
+				else {}
+			}
+
+			return ast.Identifier{
+				token: x
+				from:  p.module_
+			}
+		}
+		token.VBlock {
+			return ast.VBlock{
+				v_code: p.cur_token.get_value()
+				from:   p.module_
+			}
+		}
+		token.Numeric {
+			x := p.cur_token.token_type as token.Numeric
+			mut lit_type := ast.LitrealType.integer
+			if x.hint == token.NumericType.f64 {
+				lit_type = ast.LitrealType.floating_point
+			}
+			p.eat(token.Token{
+				token_type: token.Numeric{
+					value: x.value
+					hint:  x.hint
+				}
+			})!
+			return ast.Litreal{
+				hint:  lit_type
+				value: x.value
+			}
+		}
+		token.Punctuation {
+			if p.check_token(token.Token{
+				token_type: token.Punctuation{
+					open:  true
+					value: '('
+				}
+			})
+			{
+				p.eat(token.Token{
+					token_type: token.Punctuation{
+						open:  true
+						value: '('
+					}
+				})!
+
+				node := p.parse_bin_logical_expression(0)!
+
+				p.eat(token.Token{
+					token_type: token.Punctuation{
+						open:  false
+						value: ')'
+					}
+				})!
+
+				return node
+			}
+
+			if p.check_token(token.Token{
+				token_type: token.Punctuation{
+					open:  true
+					value: '['
+				}
+			})
+			{
+				p.eat(token.Token{
+					token_type: token.Punctuation{
+						open:  true
+						value: '['
+					}
+				})!
+				mut table_constructor := ast.TableConstructorExpression{
+					fields: p.parse_table_constructor_expression()!
+				}
+				p.eat(token.Token{
+					token_type: token.Punctuation{
+						open:  false
+						value: ']'
+					}
+				})!
+				return table_constructor
+			}
+		}
+		else {}
+	}
+	return error(errors_df.gen_custom_error_message('parsing', 'parse_factor', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
+		token: p.cur_token.get_value()
+	}))
 }

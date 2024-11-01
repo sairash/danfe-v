@@ -21,6 +21,9 @@ fn (mut p Parse) next() ! {
 	p.prev_token = p.cur_token
 	p.cur_token = p.nxt_token
 	p.nxt_token = p.lex.next()!
+
+
+	
 	if p.check_token(token.Token{ token_type: token.EOF{} }) {
 		errors_df.ErrorUnexpectedEOF{}
 	}
@@ -88,116 +91,6 @@ fn (p &Parse) check_token_with_name(expected token.Token) bool {
 
 fn (p &Parse) check_next_with_name_token(expected token.Token) bool {
 	return p.nxt_token.get_name() == expected.get_name()
-}
-
-fn (mut p Parse) parse_factor() !ast.Node {
-	match p.cur_token.token_type {
-		token.String {
-			x := p.cur_token.token_type as token.String
-
-			p.eat(token.Token{
-				token_type: token.String{
-					value: x.value
-				}
-			})!
-
-			return ast.Litreal{
-				hint:  ast.LitrealType.str
-				value: x.value
-			}
-		}
-		token.Identifier {
-			if p.check_next_token(token.Token{
-				token_type: token.Punctuation{
-					open:  true
-					value: '('
-				}
-			})
-			{
-				return p.parse_call_expression()
-			}
-
-			x := p.cur_token.token_type as token.Identifier
-
-			p.eat(token.Token{
-				token_type: token.Identifier{
-					value:    x.value
-					reserved: x.reserved
-				}
-			})!
-
-			match x.reserved {
-				'true', 'false' {
-					return ast.Litreal{
-						hint:  ast.LitrealType.boolean
-						value: x.reserved
-					}
-				}
-				'nil' {
-					return ast.Litreal{
-						hint:  ast.LitrealType.null
-						value: x.reserved
-					}
-				}
-				else {}
-			}
-
-			return ast.Identifier{
-				token: x
-				from:  p.module_
-			}
-		}
-		token.VBlock {
-			return ast.VBlock{
-				v_code: p.cur_token.get_value()
-				from:   p.module_
-			}
-		}
-		token.Numeric {
-			x := p.cur_token.token_type as token.Numeric
-			mut lit_type := ast.LitrealType.integer
-			if x.hint == token.NumericType.f64 {
-				lit_type = ast.LitrealType.floating_point
-			}
-			p.eat(token.Token{
-				token_type: token.Numeric{
-					value: x.value
-					hint:  x.hint
-				}
-			})!
-			return ast.Litreal{
-				hint:  lit_type
-				value: x.value
-			}
-		}
-		token.Punctuation {
-			x := p.cur_token.token_type as token.Punctuation
-			if x.open && x.value == '(' {
-				p.eat(token.Token{
-					token_type: token.Punctuation{
-						open:  true
-						value: '('
-					}
-				})!
-
-				node := p.parse_bin_logical_expression(0)!
-
-				p.eat(token.Token{
-					token_type: token.Punctuation{
-						open:  false
-						value: ')'
-					}
-				})!
-
-				return node
-			}
-		}
-		else {}
-	}
-	return error(errors_df.gen_custom_error_message('parsing', 'parse_factor', p.lex.file_path,
-		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
-		token: p.cur_token.get_value()
-	}))
 }
 
 fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
@@ -285,8 +178,8 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 					{
 						return error(errors_df.gen_custom_error_message('parsing', 'call_exp',
 							p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCannotUseTokenIfBefore{
-							having:  ','
-							token: ')'
+							having: ','
+							token:  ')'
 						}))
 					}
 					p.eat(token.Token{
@@ -332,6 +225,7 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 fn (mut p Parse) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
 		token.String, token.Numeric, token.Identifier, token.VBlock {
+			
 			return p.parse_bin_logical_expression(0)
 		}
 		token.Punctuation {
@@ -339,6 +233,10 @@ fn (mut p Parse) parse_expression() !ast.Node {
 				token_type: token.String{}
 			}) {
 				return p.parse_bin_logical_expression(0)
+			}
+
+			if p.cur_token.get_value() == '[' {
+				return p.parse_factor()
 			}
 		}
 		else {}
@@ -548,7 +446,7 @@ fn (mut p Parse) parse_identifier() !ast.Node {
 		else {}
 	}
 
-	return error(errors_df.gen_custom_error_message('parsing', 'expression', p.lex.file_path,
+	return error(errors_df.gen_custom_error_message('parsing', 'ident exper', p.lex.file_path,
 		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
 		token: p.cur_token.get_value()
 	}))
