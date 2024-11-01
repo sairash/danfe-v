@@ -1,8 +1,9 @@
 
 y = [
     "test"=> "hello"
-    "sairash"=> "gautam"
-    
+    "sairash"=> "gautam" # test side
+
+    # multidimensional Array / Table
     "test_multi_dim" => [
         "test", "dim"
     ]

@@ -244,7 +244,6 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 }
 
 fn (mut p Parse) parse_index_expression() !ast.Node {
-	
 	mut index_exp := ast.IndexExpression{
 		base:   ast.Identifier{
 			token: p.cur_token.token_type as token.Identifier
@@ -284,18 +283,12 @@ fn (mut p Parse) parse_index_expression() !ast.Node {
 		})!
 	}
 
-	
 	return index_exp
 }
 
 fn (mut p Parse) parse_table_constructor_expression() ![]ast.Node {
 	mut ret_node := []ast.Node{}
 	for {
-		for p.cur_token.get_value() == "EOL" {
-			p.eat(token.Token{
-				token_type: token.EOL{}
-			})!
-		}
 		if p.check_token(token.Token{
 			token_type: token.Punctuation{
 				open:  false
@@ -305,35 +298,52 @@ fn (mut p Parse) parse_table_constructor_expression() ![]ast.Node {
 		{
 			break
 		}
-		
-		parsed_exp := p.parse_expression()!
 
-		if p.check_token(token.Token{
-			token_type: token.Operator{
-				value: '=>'
-			}
-		})
-		{
-			p.eat(token.Token{
-				token_type: token.Operator{
-					value: '=>'
-				}
-			})!
+		match p.cur_token.token_type {
+			token.String, token.Numeric, token.VBlock, token.Identifier {
+				parsed_exp := p.parse_expression()!
 
-			match parsed_exp {
-				ast.Litreal {
-					ret_node << ast.TableKey{
-						key:   parsed_exp
-						value: p.parse_expression()!
+				if p.check_token(token.Token{
+					token_type: token.Operator{
+						value: '=>'
 					}
-				}
-				else {
-					return error(errors_df.gen_custom_error_message('parsing', 'key_constructor',
-						p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorTableKeyCannotBeOtherThanLitreal{}))
+				})
+				{
+					p.eat(token.Token{
+						token_type: token.Operator{
+							value: '=>'
+						}
+					})!
+
+					match parsed_exp {
+						ast.Litreal {
+							ret_node << ast.TableKey{
+								key:   parsed_exp
+								value: p.parse_expression()!
+							}
+						}
+						else {
+							return error(errors_df.gen_custom_error_message('parsing',
+								'key_constructor', p.lex.file_path, p.lex.cur_line, p.lex.cur_col,
+								errors_df.ErrorTableKeyCannotBeOtherThanLitreal{}))
+						}
+					}
+				} else {
+					ret_node << parsed_exp
 				}
 			}
-		} else {
-			ret_node << parsed_exp
+			token.EOL {
+				p.eat(token.Token{ token_type: token.EOL{} })!
+			}
+			token.Comment {
+				p.eat(token.Token{ token_type: token.Comment{} })!
+			}
+			else {
+				return error(errors_df.gen_custom_error_message('parsing', 'table_constructor',
+					p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
+					token: p.cur_token.get_value()
+				}))
+			}
 		}
 
 		p.eat(token.Token{
@@ -380,7 +390,6 @@ fn (mut p Parse) parse_factor() !ast.Node {
 				}
 			})
 			{
-
 				return p.parse_index_expression()
 			}
 
