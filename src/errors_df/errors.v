@@ -42,7 +42,7 @@ fn gen_error_start_keyword(while_when string, path string, cur_line int, cur_col
 }
 
 pub struct ErrorFileIO {
-	pub mut:
+pub mut:
 	file_path string @[required]
 }
 
@@ -67,7 +67,7 @@ fn (err ErrorImportPlacement) output() string {
 }
 
 pub struct ErrorDotCantBeEndOfIdent {
-	pub mut:
+pub mut:
 	token string
 }
 
@@ -75,23 +75,21 @@ fn (err ErrorDotCantBeEndOfIdent) output() string {
 	return '"." can\'t be the end of the identifier: ${err.token}'
 }
 
-
 pub struct ErrorImportTryingToCallSelf {}
 
 fn (err ErrorImportTryingToCallSelf) output() string {
 	return 'Trying to "import" self from self.'
 }
 
-pub struct ErrorImportCycleDetected{
-	pub mut:
-	from_file string
+pub struct ErrorImportCycleDetected {
+pub mut:
+	from_file     string
 	detected_file string
 }
 
 fn (err ErrorImportCycleDetected) output() string {
 	return 'Import Cycle Detected. From: ${err.from_file}, Detected: ${err.detected_file}'
 }
-
 
 pub struct ErrorUnexpectedToken {
 pub mut:
@@ -117,9 +115,8 @@ fn (err ErrorUseOfMultipleFloatPoints) output() string {
 	return 'Attempting the use of multiple floating points "." in number.'
 }
 
-
 pub struct ErrorOnlyAllowed {
-	pub mut:
+pub mut:
 	value string
 }
 
@@ -127,17 +124,15 @@ fn (err ErrorOnlyAllowed) output() string {
 	return 'Only allowed ${err.value}'
 }
 
-
 pub struct ErrorUnexpectedEOF {}
 
 fn (err ErrorUnexpectedEOF) output() string {
 	return 'Unexpected End of File'
 }
 
-
 pub struct ErrorNeededAfterInit {
-	pub mut:
-	init_token string
+pub mut:
+	init_token     string
 	expected_token string
 }
 
@@ -145,17 +140,37 @@ fn (err ErrorNeededAfterInit) output() string {
 	return 'After initializing with "${err.init_token}" an ending token "${err.expected_token} is required."'
 }
 
+pub struct ErrorHaveToUseKeyInTable {
+}
+
+fn (err ErrorHaveToUseKeyInTable) output() string {
+	return 'You have to use "Key" in "Array".'
+}
+
+
+pub struct ErrorCannotUseKeyInArray {
+}
+
+fn (err ErrorCannotUseKeyInArray) output() string {
+	return 'You cannot use Key In Array.'
+}
+
+pub struct ErrorTableKeyCannotBeOtherThanLitreal {
+}
+
+fn (err ErrorTableKeyCannotBeOtherThanLitreal) output() string {
+	return 'Key of Table ["key"=> "value"] can only be of type "number" or "string".'
+}
 
 pub struct ErrorCannotUseTokenIfBefore {
-	pub mut:
-	token string
+pub mut:
+	token  string
 	having string
 }
 
 fn (err ErrorCannotUseTokenIfBefore) output() string {
 	return 'Use of "${err.having}" is not allowed before "${err.token}"'
 }
-
 
 pub struct ErrorUnexpected {}
 
@@ -191,11 +206,10 @@ fn (err ErrorBinaryOperationUnsupported) output() string {
 	return 'Unsupported Bniary operation in literal "${err.type_of_value}", Found: ${err.found} Supported: ${err.supported}'
 }
 
-
 pub struct ErrorUsingElseIfAfterElse {
-	pub mut:
+pub mut:
 	trying_to_use string
-	before_using string
+	before_using  string
 }
 
 fn (err ErrorUsingElseIfAfterElse) output() string {
@@ -203,14 +217,13 @@ fn (err ErrorUsingElseIfAfterElse) output() string {
 }
 
 pub struct ErrorNoConditionsProvided {
-	pub mut:
+pub mut:
 	token string
 }
 
 fn (err ErrorNoConditionsProvided) output() string {
 	return 'No Conditions provided for ${err.token}.'
 }
-
 
 pub struct ErrorDivisionByZero {}
 
@@ -247,7 +260,6 @@ fn (err ErrorUnexpectedTokenExpectedEitherOr) output() string {
 	return 'Unexpected value: found ${err.found}, expecting either "${err.either}" or "${err.or_token}"'
 }
 
-
 pub struct ErrorTryingToUseReservedIdentifier {
 pub mut:
 	identifier string
@@ -277,22 +289,21 @@ fn (err ErrorMissingParenthesis) output() string {
 
 pub struct ErrorArgumentsMisMatch {
 pub mut:
-	func_name string
+	func_name       string
 	expected_amount string
-	found_amount string
+	found_amount    string
 }
 
 fn (err ErrorArgumentsMisMatch) one_or_multiple(amount string) string {
 	if amount == '1' {
-		return '$amount argument'
+		return '${amount} argument'
 	}
-	return '$amount arguments'
+	return '${amount} arguments'
 }
 
 fn (err ErrorArgumentsMisMatch) output() string {
 	return 'Arguments mismatch for function "${err.func_name}" \nwant: ${err.one_or_multiple(err.expected_amount)} \nhave: ${err.one_or_multiple(err.found_amount)}'
 }
-
 
 // [Not an acutal Error] This Error is kept just to make it easier to end Parising
 pub struct ErrorExpectedEOF {}
