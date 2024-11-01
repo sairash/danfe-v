@@ -16,6 +16,8 @@ pub const reserved_symbols = {
 	'println':  ['dekhauln']
 	'input':    ['sodha']
 	'nil':      ['khali', 'null', 'sunna']
+	'v':        []
+	'endv':     []
 	// 'not':      ['hoina']
 	// 'or':       ['ya']
 	// 'and':      ['ra']
