@@ -53,6 +53,18 @@ fn (mut p Parse) parse_function() !ast.Node {
 					}
 				})
 				{
+					if p.check_prev_token(token.Token{
+						token_type: token.Seperator{
+							value: ','
+						}
+					})
+					{
+						return error(errors_df.gen_custom_error_message('parsing', 'function_declaration',
+							p.lex.file_path, p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCannotUseTokenIfBefore{
+							having:  ','
+							token: ')'
+						}))
+					}
 					p.eat(token.Token{
 						token_type: token.Punctuation{
 							open:  false
