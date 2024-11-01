@@ -7,7 +7,16 @@ import rand
 import grammer
 import os
 
-type EvalOutput = string | int | f64
+__global identifier_value_map = map[string]EvalOutput{}
+
+__global function_value_map = map[string]FunctionStore{}
+
+__global program_state_map = map[string]ProgramStateStore{}
+
+type Array = []EvalOutput
+type Table = map[string]EvalOutput
+
+type EvalOutput = string | int | f64 | Table | Array
 
 pub fn (evl EvalOutput) is_empty() bool {
 	match evl {
@@ -20,18 +29,75 @@ pub fn (evl EvalOutput) is_empty() bool {
 		f64 {
 			return evl == 0
 		}
+		Table {
+			return evl.keys().len == 0
+		}
+		Array {
+			return evl.len == 0
+		}
+	}
+}
+
+fn is_condition_met(process_id string, condition ?Node) !bool {
+	cond_eval := condition or { return true }
+		.eval(process_id)!
+
+	match cond_eval {
+		string {
+			return cond_eval != ''
+		}
+		int {
+			return cond_eval == 1
+		}
+		f64 {
+			return cond_eval == 1.0
+		}
+		Array {
+			return cond_eval.len != 0
+		}
+		Table {
+			return cond_eval.keys().len != 0
+		}
 	}
 }
 
 pub fn (evl EvalOutput) get_as_string() string {
 	output_str := match evl {
-		string { evl }
-		int, f64 { evl.str() }
+		string {
+			evl
+		}
+		int, f64 {
+			evl.str()
+		}
+		Array {
+			if evl.len == 0 {
+				return "[]"
+			}
+			mut ops := "["
+			for val in evl {
+				
+				ops += "${val.get_as_string()}, "
+			}
+			ops = ops[..ops.len - 2]
+			ops += "]"
+			return ops
+		}
+		Table {
+			if evl.len == 0 {
+				return "[]"
+			}
+			mut ops := "["
+			for key, val in evl {
+				ops += "${key} => ${val.get_as_string()}, "
+			}
+			ops = ops[..ops.len - 2]
+			ops += "]"
+			return ops
+		}
 	}
 
 	return output_str
 }
-
 
 fn gen_process_id(process_id string) string {
 	return if process_id != '' { process_id } else { rand.ascii(14) }
@@ -47,7 +113,7 @@ fn gen_map_key(from string, process_id string, value string) string {
 
 fn match_identifier_with_reserved(identifier string, from string) Identifier {
 	mut ret_ident := token.Identifier{
-		value: identifier
+		value:    identifier
 		reserved: ''
 	}
 
@@ -57,15 +123,18 @@ fn match_identifier_with_reserved(identifier string, from string) Identifier {
 		}
 	}
 
-	return Identifier{token: ret_ident, from: from}
+	return Identifier{
+		token: ret_ident
+		from:  from
+	}
 }
 
 fn remove_space(string_value string) string {
-	return string_value.replace(' ', '').replace('\n', '').replace('\t', '') 
+	return string_value.replace(' ', '').replace('\n', '').replace('\t', '')
 }
 
 fn replace_identifier_in_string(string_value string, from string, process_id string) !string {
-	mut ret_string := ""
+	mut ret_string := ''
 	mut start_index := 0
 	mut cur_index := 0
 	mut last_index := 0
@@ -85,24 +154,23 @@ fn replace_identifier_in_string(string_value string, from string, process_id str
 			})
 		}
 
-		ident := match_identifier_with_reserved(remove_space(string_value[cur_index+3 .. last_index]), from)
+		ident := match_identifier_with_reserved(remove_space(string_value[cur_index + 3..last_index]),
+			from)
 
 		if ident.token.reserved != '' {
 			return error_gen('eval', 'replace_with_ident', errors_df.ErrorOnlyAllowed{
-				value:     '"identifer" cannot use "Reserved Key" "${ident.token.value}"'
+				value: '"identifer" cannot use "Reserved Key" "${ident.token.value}"'
 			})
 		}
 
-
-		ret_string += string_value[start_index..cur_index] + "${ident.eval(process_id)!.get_as_string()}"
-
+		ret_string += string_value[start_index..cur_index] +
+			'${ident.eval(process_id)!.get_as_string()}'
 
 		cur_index = last_index + 1
 		start_index = cur_index
-
 	}
 
-	ret_string += string_value[start_index..string_value.len -1]
+	ret_string += string_value[start_index..string_value.len - 1]
 	return ret_string
 }
 
@@ -149,12 +217,6 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id string) !EvalOutput 
 
 	return 0
 }
-
-__global identifier_value_map = map[string]EvalOutput{}
-
-__global function_value_map = map[string]FunctionStore{}
-
-__global program_state_map = map[string]ProgramStateStore{}
 
 pub fn set_if_module_not_already_init(full_module_ string, module_ string) bool {
 	if '${full_module_}.__module__' in identifier_value_map {
@@ -314,17 +376,80 @@ fn (lo Logical) eval(process_id string) !EvalOutput {
 	})
 }
 
+pub struct IndexExpression {
+pub mut:
+	base   Identifier
+	indexs []Node
+}
+
+fn (ie IndexExpression) eval(process_id string) !EvalOutput {
+	println(ie)
+	return error_gen('eval', 'index_expression', errors_df.ErrorUnexpectedToken{
+		token: ie.base.from
+	})
+}
+
+pub struct TableKey {
+pub mut:
+	key   Litreal
+	value Node
+}
+
+fn (tk TableKey) eval(process_id string) !EvalOutput {
+	return tk.value.eval(process_id)!
+}
+
+pub struct TableConstructorExpression {
+pub mut:
+	fields []Node
+}
+
+fn (te TableConstructorExpression) eval(process_id string) !EvalOutput {
+	mut table_type := 0
+	mut table := Table(map[string]EvalOutput{})
+	mut array := Array([]EvalOutput{})
+	for field in te.fields {
+		match field {
+			TableKey {
+				if table_type == 2 || table_type == 0 {
+					table_type = 2
+					eval_output := field.value.eval(process_id)!
+					table['${field.key.value}'] = eval_output
+				} else {
+					return error_gen('eval', 'index_expression', errors_df.ErrorHaveToUseKeyInTable{})
+				}
+			}
+			else {
+				if table_type == 1 || table_type == 0 {
+					table_type = 1
+					eval_output := field.eval(process_id)!
+					array << eval_output
+				} else {
+					return error_gen('eval', 'index_expression', errors_df.ErrorCannotUseKeyInArray{})
+				}
+			}
+		}
+	}
+
+	if table_type == 2 {
+		return table
+	}
+
+	return array
+}
+
 pub struct VBlock {
 pub mut:
 	v_code string
-	from string
+	from   string
 }
 
 fn (vb VBlock) eval(process_id string) !EvalOutput {
 	mut ret_val := ''
 
 	mut cmd := os.Command{
-		path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace("return(", "println(")}\''
+		path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
+			'println(')}\''
 	}
 
 	cmd.start()!
@@ -426,23 +551,6 @@ pub mut:
 	hint      Conditions
 	condition ?Node
 	body      []Node
-}
-
-fn is_condition_met(process_id string, condition ?Node) !bool {
-	cond_eval := condition or { return true }
-		.eval(process_id)!
-
-	match cond_eval {
-		string {
-			return cond_eval != ''
-		}
-		int {
-			return cond_eval == 1
-		}
-		f64 {
-			return cond_eval == 1.0
-		}
-	}
 }
 
 fn (cond &ConditionClause) eval(process_id string) !EvalOutput {
