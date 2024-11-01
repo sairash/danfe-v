@@ -143,6 +143,12 @@ fn (mut p Parse) parse_factor() !ast.Node {
 				from:  p.module_
 			}
 		}
+		token.VBlock {
+			return ast.VBlock{
+				v_code: p.cur_token.get_value()
+				from: p.module_
+			}
+		}
 		token.Numeric {
 			x := p.cur_token.token_type as token.Numeric
 			mut lit_type := ast.LitrealType.integer
@@ -308,7 +314,7 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 
 fn (mut p Parse) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
-		token.String, token.Numeric, token.Identifier {
+		token.String, token.Numeric, token.Identifier, token.VBlock {
 			return p.parse_bin_logical_expression(0)
 		}
 		token.Punctuation {
@@ -537,7 +543,7 @@ pub fn (mut proc Parse) walk() ![]ast.Node {
 	for {
 		// temprorary
 		match proc.cur_token.token_type {
-			token.String, token.Numeric {
+			token.String, token.Numeric, token.VBlock {
 				// if p.check_next_with_name_token(token.Token{
 				// 	token_type: token.Operator{}
 				// })

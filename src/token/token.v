@@ -16,6 +16,11 @@ pub mut:
 	value string
 }
 
+pub struct VBlock {
+pub mut:
+	value string
+}
+
 // Comment Block
 pub struct Comment {}
 
@@ -69,6 +74,7 @@ pub type TokenType = EOL
 	| Identifier
 	| Operator
 	| Comment
+	| VBlock
 
 pub struct Token {
 pub mut:
@@ -107,6 +113,9 @@ pub fn (t Token) get_value() string {
 		Operator {
 			return x.value
 		}
+		VBlock {
+			return x.value
+		}
 	}
 }
 
@@ -135,6 +144,9 @@ pub fn (t Token) get_name() string {
 		}
 		Identifier {
 			return "Identifier"
+		}
+		VBlock {
+			return "V Block"
 		}
 		Operator {
 			return "Operator (eg: + , - , * , /)"
