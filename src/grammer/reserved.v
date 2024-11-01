@@ -18,6 +18,7 @@ pub const reserved_symbols = {
 	'nil':      ['khali', 'null', 'sunna']
 	'v':        []
 	'endv':     []
+	'del':      ['hatau']
 	// 'not':      ['hoina']
 	// 'or':       ['ya']
 	// 'and':      ['ra']
