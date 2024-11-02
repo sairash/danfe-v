@@ -370,6 +370,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 			return ast.Litreal{
 				hint:  ast.LitrealType.str
 				value: x.value
+				from: p.module_
 			}
 		}
 		token.Identifier {
@@ -407,12 +408,14 @@ fn (mut p Parse) parse_factor() !ast.Node {
 					return ast.Litreal{
 						hint:  ast.LitrealType.boolean
 						value: x.reserved
+						from: p.module_
 					}
 				}
 				'nil' {
 					return ast.Litreal{
 						hint:  ast.LitrealType.null
 						value: x.reserved
+						from: p.module_
 					}
 				}
 				else {}
@@ -444,6 +447,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 			return ast.Litreal{
 				hint:  lit_type
 				value: x.value
+				from: p.module_
 			}
 		}
 		token.Punctuation {

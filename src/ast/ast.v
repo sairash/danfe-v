@@ -266,7 +266,7 @@ fn replace_identifier_in_string(string_value string, from string, process_id str
 		ret_string += string_value[start_index..cur_index] +
 			'${ident.eval(process_id)!.get_as_string()}'
 
-		cur_index = last_index + 1
+		cur_index = last_index
 		start_index = cur_index
 	}
 
@@ -373,6 +373,7 @@ pub struct Litreal {
 pub mut:
 	hint  LitrealType
 	value string
+	from string @[required]
 }
 
 fn (li Litreal) eval(process_id string) !EvalOutput {
@@ -384,7 +385,7 @@ fn (li Litreal) eval(process_id string) !EvalOutput {
 			return EvalOutput(strconv.atof64(li.value)!)
 		}
 		.str {
-			return li.value
+			return replace_identifier_in_string(li.value, li.from, process_id)!
 		}
 		.boolean {
 			if li.value == 'true' {
