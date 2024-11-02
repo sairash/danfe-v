@@ -1,0 +1,5 @@
+y = []
+
+y["sai"] = 10
+
+println(y)

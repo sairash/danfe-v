@@ -6,6 +6,6 @@ x ?= 10
 y ?= 4
 
 
-if __module__ == "name" {
+if __module__ == "main" {
     println(x," ", y, " ", x * y)
 }
