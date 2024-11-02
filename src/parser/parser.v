@@ -22,8 +22,6 @@ fn (mut p Parse) next() ! {
 	p.cur_token = p.nxt_token
 	p.nxt_token = p.lex.next()!
 
-
-	
 	if p.check_token(token.Token{ token_type: token.EOF{} }) {
 		errors_df.ErrorUnexpectedEOF{}
 	}
@@ -225,7 +223,6 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 fn (mut p Parse) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
 		token.String, token.Numeric, token.Identifier, token.VBlock {
-			
 			return p.parse_bin_logical_expression(0)
 		}
 		token.Punctuation {
@@ -370,78 +367,115 @@ fn (p &Parse) get_first_value_from_node(ast_nodes []ast.Node) !ast.Node {
 		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpected{}))
 }
 
-fn (mut p Parse) parse_identifier() !ast.Node {
-	match p.cur_token.token_type {
-		token.Identifier {
-			ident := p.cur_token.token_type as token.Identifier
-			if p.check_next_token(token.Token{
-				token_type: token.Operator{
-					value: '='
-				}
-			}) || p.check_next_token(token.Token{
-				token_type: token.Operator{
-					value: '?='
-				}
-			}) {
+fn (mut p Parse) parse_assignment() !ast.Node {
+	mut var_ := ast.Node(ast.Identifier{
+		token: p.cur_token.token_type as token.Identifier
+		from:  p.module_
+	})
+
+	if p.check_next_token(token.Token{
+		token_type: token.Punctuation{
+			open:  true
+			value: '['
+		}
+	})
+	{
+
+		var_ = p.parse_index_expression()!
+	}
+
+	if p.check_next_token(token.Token{
+		token_type: token.Operator{
+			value: '='
+		}
+	}) || p.check_next_token(token.Token{
+		token_type: token.Operator{
+			value: '?='
+		}
+	}) || p.check_token(token.Token{
+		token_type: token.Operator{
+			value: '='
+		}
+	}) || p.check_token(token.Token{
+		token_type: token.Operator{
+			value: '?='
+		}
+	}) {
+		match var_ {
+			ast.Identifier {
 				p.eat_with_name_token(token.Token{
 					token_type: token.Identifier{}
 				})!
+			}
+			else {}
+		}
 
-				operator_value := p.cur_token.get_value()
+		operator_value := p.cur_token.get_value()
 
-				p.eat(token.Token{
-					token_type: token.Operator{
-						value: operator_value
+		p.eat(token.Token{
+			token_type: token.Operator{
+				value: operator_value
+			}
+		})!
+
+		return ast.AssignmentStatement{
+			hint:     operator_value
+			variable: var_
+			init:     p.parse_expression()!
+		}
+	}
+
+	return var_
+}
+
+fn (mut p Parse) parse_identifier() !ast.Node {
+	match p.cur_token.token_type {
+		token.Identifier {
+			parse_asm := p.parse_assignment()!
+			match parse_asm {
+				ast.Identifier {
+					match parse_asm.token.reserved {
+						'if' {
+							return p.parse_if_statement()
+						}
+						'loop' {
+							return p.parse_loop_statement()
+						}
+						'function' {
+							return p.parse_function()
+						}
+						'break' {
+							p.eat_with_name_token(token.Token{
+								token_type: token.Identifier{}
+							})!
+							return ast.BreakStatement{}
+						}
+						'continue' {
+							p.eat_with_name_token(token.Token{
+								token_type: token.Identifier{}
+							})!
+							return ast.ContinueStatement{}
+						}
+						'return' {
+							p.eat_with_name_token(token.Token{
+								token_type: token.Identifier{}
+							})!
+							return ast.ReturnStatement{
+								value: p.parse_expression()!
+							}
+						}
+						'import' {
+							return p.parse_import_statement()!
+						}
+						else {}
 					}
-				})!
-
-				return ast.AssignmentStatement{
-					hint:     operator_value
-					variable: ast.Identifier{
-						token: ident
-						from:  p.module_
-					}
-					init:     p.parse_expression()!
+					return p.parse_expression()!
+				}
+				else {
+					return parse_asm
 				}
 			}
 
-			match ident.reserved {
-				'if' {
-					return p.parse_if_statement()
-				}
-				'loop' {
-					return p.parse_loop_statement()
-				}
-				'function' {
-					return p.parse_function()
-				}
-				'break' {
-					p.eat_with_name_token(token.Token{
-						token_type: token.Identifier{}
-					})!
-					return ast.BreakStatement{}
-				}
-				'continue' {
-					p.eat_with_name_token(token.Token{
-						token_type: token.Identifier{}
-					})!
-					return ast.ContinueStatement{}
-				}
-				'return' {
-					p.eat_with_name_token(token.Token{
-						token_type: token.Identifier{}
-					})!
-					return ast.ReturnStatement{
-						value: p.parse_expression()!
-					}
-				}
-				'import' {
-					return p.parse_import_statement()!
-				}
-				else {}
-			}
-
-			return p.parse_expression()!
 		}
 		else {}
 	}
@@ -540,7 +574,6 @@ pub fn (mut p Parse) append_to_lex(input_data string) ![]ast.Node {
 }
 
 pub fn Parse.new_temp(go_through_file_data string) !&Parse {
-	identifier_value_map = map[string]ast.EvalOutput{}
 	return &Parse{
 		lex:      lexer.Lex{
 			x:               0
