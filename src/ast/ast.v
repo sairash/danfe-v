@@ -373,7 +373,7 @@ pub struct Litreal {
 pub mut:
 	hint  LitrealType
 	value string
-	from string @[required]
+	from  string @[required]
 }
 
 fn (li Litreal) eval(process_id string) !EvalOutput {
@@ -544,6 +544,16 @@ fn (te TableConstructorExpression) eval(process_id string) !EvalOutput {
 
 	table.len = i
 	return table
+}
+
+pub struct DelStatement {
+pub mut:
+	variable Identifier
+}
+
+fn (ds DelStatement) eval(process_id string) !EvalOutput {
+	identifier_value_map.delete(gen_map_key(ds.variable.from, process_id, ds.variable.token.value))
+	return 1
 }
 
 pub struct VBlock {

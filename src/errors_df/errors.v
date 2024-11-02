@@ -202,6 +202,15 @@ fn (err ErrorCannotUseTokenIfBefore) output() string {
 	return 'Use of "${err.having}" is not allowed before "${err.token}"'
 }
 
+pub struct ErrorCanDeleteOnlyIdentifiers {
+	pub mut:
+	del_key string
+}
+
+fn (err ErrorCanDeleteOnlyIdentifiers) output() string {
+	return 'By using "${err.del_key}" keyword you can only delete Identifiers'
+}
+
 pub struct ErrorUnexpected {}
 
 fn (err ErrorUnexpected) output() string {

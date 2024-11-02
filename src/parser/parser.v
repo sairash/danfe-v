@@ -380,7 +380,6 @@ fn (mut p Parse) parse_assignment() !ast.Node {
 		}
 	})
 	{
-
 		var_ = p.parse_index_expression()!
 	}
 
@@ -464,6 +463,37 @@ fn (mut p Parse) parse_identifier() !ast.Node {
 								value: p.parse_expression()!
 							}
 						}
+						'del' {
+							p.eat_with_name_token(token.Token{
+								token_type: token.Identifier{}
+							})!
+
+							if !p.check_token_with_name(token.Token{
+								token_type: token.Identifier{}
+							}) {
+								return error(errors_df.gen_custom_error_message('parsing',
+									'ident exper', p.lex.file_path, p.lex.cur_line, p.lex.cur_col,
+									errors_df.ErrorCanDeleteOnlyIdentifiers{
+									del_key: p.prev_token.get_value()
+								}))
+							}
+
+							parse_iden := p.parse_factor()!
+							match parse_iden {
+								ast.Identifier {
+									return ast.DelStatement{
+										variable: parse_iden
+									}
+								}
+								else {}
+							}
+
+							return error(errors_df.gen_custom_error_message('parsing',
+								'ident exper', p.lex.file_path, p.lex.cur_line, p.lex.cur_col,
+								errors_df.ErrorCanDeleteOnlyIdentifiers{
+								del_key: p.prev_token.get_value()
+							}))
+						}
 						'import' {
 							return p.parse_import_statement()!
 						}
@@ -475,7 +505,6 @@ fn (mut p Parse) parse_identifier() !ast.Node {
 					return parse_asm
 				}
 			}
-
 		}
 		else {}
 	}
