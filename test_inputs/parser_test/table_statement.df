@@ -2,10 +2,12 @@
 y = [
     "test"=> "hello"
     "sairash"=> "gautam" # test side
-
+    
     # multidimensional Array / Table
     "test_multi_dim" => [
-        "test", "dim"
+        "test" => [
+            1, 2, 3
+        ]
     ]
 ]
 
@@ -13,5 +15,5 @@ y = [
 x = []
 
 
-println("Y: ",y)
+println("The value inside y -> test_multi_dim -> test -> 0 is: ",y["test_multi_dim"]["test"][0])
 println("X: ",x)
