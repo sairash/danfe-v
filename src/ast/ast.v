@@ -270,7 +270,7 @@ fn replace_identifier_in_string(string_value string, from string, process_id str
 		start_index = cur_index
 	}
 
-	ret_string += string_value[start_index..string_value.len - 1]
+	ret_string += string_value[start_index..string_value.len]
 	return ret_string
 }
 
