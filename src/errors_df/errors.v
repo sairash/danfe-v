@@ -160,6 +160,16 @@ fn (err ErrorArrayOutOfRange) output() string {
 	return 'Array out of range: total length of array "${err.name_of_var}" is: ${err.total_len} : trying to get index ${err.trying_to_get}'
 }
 
+
+
+
+pub struct ErrorCanAssignToIdenifiersArrayAndTablesOnly {
+}
+
+fn (err ErrorCanAssignToIdenifiersArrayAndTablesOnly) output() string {
+	return 'Can assign values to "Identifers", "Arrays" and "Tables" only.'
+}
+
 pub struct ErrorHaveToUseKeyInTable {
 }
 

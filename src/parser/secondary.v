@@ -249,7 +249,7 @@ fn (mut p Parse) parse_index_expression() !ast.Node {
 			token: p.cur_token.token_type as token.Identifier
 			from:  p.module_
 		}
-		indexs: []
+		indexes: []
 	}
 
 	p.eat_with_name_token(token.Token{
@@ -273,7 +273,7 @@ fn (mut p Parse) parse_index_expression() !ast.Node {
 			}
 		})!
 
-		index_exp.indexs << p.parse_expression()!
+		index_exp.indexes << p.parse_expression()!
 
 		p.eat(token.Token{
 			token_type: token.Punctuation{
