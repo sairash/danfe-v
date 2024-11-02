@@ -18,6 +18,43 @@ type Table = map[string]EvalOutput
 
 type EvalOutput = string | int | f64 | Table | Array
 
+
+pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) !(EvalOutput,string) {
+	match evl {
+		Table {
+			return evl[value.get_as_string()] or { 
+				return 0, value.get_as_string()
+			 }, value.get_as_string()
+		}
+		Array {
+			match value {
+				int {
+					if value < evl.len {
+						return evl[value], "${value}"
+					}
+					return error_gen('eval', 'get_indexed_value', errors_df.ErrorArrayOutOfRange{
+						total_len: evl.len
+						trying_to_get: "${value}"
+						name_of_var: name_of_var
+					})
+				}
+				else{
+					return error_gen('eval', 'get_indexed_value', errors_df.ErrorArrayOutOfRange{
+						total_len: evl.len
+						trying_to_get: value.get_as_string()
+						name_of_var: name_of_var
+					})
+				}
+			}
+		}
+		else{}
+	}
+	return error_gen('eval', 'get_indexed_value', errors_df.ErrorCannotUseIndexKeyOn{
+		name_of_var: name_of_var
+	})
+}
+
+
 pub fn (evl EvalOutput) is_empty() bool {
 	match evl {
 		string {
@@ -383,10 +420,13 @@ pub mut:
 }
 
 fn (ie IndexExpression) eval(process_id string) !EvalOutput {
-	println(ie)
-	return error_gen('eval', 'index_expression', errors_df.ErrorUnexpectedToken{
-		token: ie.base.from
-	})
+	mut output_val := ie.base.eval(process_id)!
+	mut name_of_var := ie.base.token.value
+	for index in ie.indexs {
+		output_val, name_of_var = output_val.get_indexed_value(index.eval(process_id)!, name_of_var)!
+	}
+
+	return output_val
 }
 
 pub struct TableKey {

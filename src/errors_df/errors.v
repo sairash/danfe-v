@@ -140,6 +140,26 @@ fn (err ErrorNeededAfterInit) output() string {
 	return 'After initializing with "${err.init_token}" an ending token "${err.expected_token} is required."'
 }
 
+pub struct ErrorCannotUseIndexKeyOn {
+	pub mut:
+	name_of_var string
+}
+
+fn (err ErrorCannotUseIndexKeyOn) output() string {
+	return 'Can only use Indexed Key (["key"]) in type "Table" or "Array". Cannot use on ${err.name_of_var}'
+}
+
+pub struct ErrorArrayOutOfRange {
+	pub mut:
+	total_len int
+	trying_to_get string
+	name_of_var string
+}
+
+fn (err ErrorArrayOutOfRange) output() string {
+	return 'Array out of range: total length of array "${err.name_of_var}" is: ${err.total_len} : trying to get index ${err.trying_to_get}'
+}
+
 pub struct ErrorHaveToUseKeyInTable {
 }
 
