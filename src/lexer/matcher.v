@@ -287,15 +287,17 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 		}
 	}
 
+	modules_sep := return_str.split(".")
+
 	if check_string_has_reserved {
 		for key, value in grammer.reserved_symbols {
-			if return_str.contains(key) {
+			if key in modules_sep {
 				return l.error_generator('"." character', errors_df.ErrorTryingToUseReservedIdentifier{
 					identifier: key
 				})
 			}
 			for _, v in value {
-				if return_str.contains(v) {
+				if v in modules_sep {
 					return l.error_generator('"." character', errors_df.ErrorTryingToUseReservedIdentifier{
 						identifier: v
 					})
