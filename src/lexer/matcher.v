@@ -240,13 +240,31 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 			}
 			match consume.ascii_str() {
 				'e' {
-					return_string += '\e'
+					return_string += '\e' // Command Escape
 				}
 				'n' {
-					return_string += '\n'
+					return_string += '\n' // Line feed (New Line)
 				}
 				't' {
-					return_string += '\t'
+					return_string += '\t' // Horizontal tab
+				}
+				'a' {
+					return_string += '\a' // Bell
+				}
+				'b' {
+					return_string += '\b' // Backspace
+				}
+				'v' {
+					return_string += '\v' // Vertical Tab
+				}
+				'f' {
+					return_string += '\f' // Form Feed
+				}
+				'r' {
+					return_string += '\r' // Carriage return
+				}
+				'0' {
+					return_string += '\0' // Null Byte
 				}
 				else {
 					return_string += consume.ascii_str()
