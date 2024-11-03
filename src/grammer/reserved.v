@@ -22,7 +22,7 @@ pub const reserved_symbols = {
 	'println':    ['dekhauln']
 	'input':      ['sodha']
 	'len':        ['ginti']
-	'typeof':     ['kho']
+	'typeof':     ['prakar']
 	'push':       ['hala']
 	'pop':        ['nikala']
 	// 'not':      ['hoina']
