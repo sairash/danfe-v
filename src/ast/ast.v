@@ -65,6 +65,7 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 			}
 			return evl.table[value.get_as_string()] or { return 0, value.get_as_string() }, value.get_as_string()
 		}
+		
 		else {}
 	}
 	return error_gen('eval', 'get_indexed_value', errors_df.ErrorCannotUseIndexKeyOn{
@@ -879,6 +880,16 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 			}
 
 			return type_of_value_reserved_function(new_process_id, ce.arguments[0])
+		}
+		'len' {
+			if ce.arguments.len != 1 {
+				return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			return len_reserved_function(new_process_id, ce.arguments[0])
 		}
 		'' {
 			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {
