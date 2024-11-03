@@ -143,7 +143,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 				if !x.open {
 					return left
 				}
-
+				break
 			}
 			token.EOL, token.Comment, token.EOF, token.Seperator {
 				return left
