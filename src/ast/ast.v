@@ -861,13 +861,24 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 		}
 		'input' {
 			if ce.arguments.len != 1 {
-				return error_gen('eval', 'input_eval', errors_df.ErrorArgumentsMisMatch{
+				return error_gen('eval', 'input', errors_df.ErrorArgumentsMisMatch{
 					func_name:       ce.base.token.value
 					expected_amount: '1'
 					found_amount:    '${ce.arguments.len}'
 				})
 			}
 			return input_reserved_function(new_process_id, ce.arguments[0])
+		}
+		'typeof' {
+			if ce.arguments.len != 1 {
+				return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+
+			return type_of_value_reserved_function(new_process_id, ce.arguments[0])
 		}
 		'' {
 			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {
