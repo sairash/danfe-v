@@ -17,14 +17,15 @@ pub mut:
 	cur_file   string
 }
 
-fn (mut p Parse) next() ! {
+fn (mut p Parse) next() !bool {
 	p.prev_token = p.cur_token
 	p.cur_token = p.nxt_token
 	p.nxt_token = p.lex.next()!
 
 	if p.check_token(token.Token{ token_type: token.EOF{} }) {
-		errors_df.ErrorUnexpectedEOF{}
+		return true
 	}
+	return false
 }
 
 fn (mut p Parse) eat(expected token.Token) ! {
@@ -93,11 +94,15 @@ fn (p &Parse) check_next_with_name_token(expected token.Token) bool {
 
 fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 	mut left := p.parse_factor()!
-
 	for {
+		
 		match p.cur_token.token_type {
 			token.Operator {
 				x := p.cur_token.token_type as token.Operator
+
+				if x.value == "=>" {
+					return left
+				}
 
 				prec := grammer.precedence[x.value] or { break }
 
@@ -115,14 +120,17 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 
 				match x.value {
 					'&&', '||', '!=', '==', '>', '<', '>=', '<=' {
-						left = ast.Logical{
+						return ast.Logical{
 							operator: x.value
 							left:     left
 							right:    right
 						}
 					}
+					'=', '?=' {
+						break
+					}
 					else {
-						left = ast.Binary{
+						return ast.Binary{
 							operator: x.value
 							left:     left
 							right:    right
@@ -130,12 +138,25 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 					}
 				}
 			}
+			token.Punctuation {
+				x := p.cur_token.token_type as token.Punctuation
+				if !x.open {
+					return left
+				}
+
+			}
+			token.EOL, token.Comment, token.EOF, token.Seperator {
+				return left
+			}
 			else {
 				break
 			}
 		}
 	}
-	return left
+	return error(errors_df.gen_custom_error_message('parsing', 'bin_op', p.lex.file_path,
+		p.lex.cur_line, p.lex.cur_col, errors_df.ErrorUnexpectedToken{
+		token: p.cur_token.get_value()
+	}))
 }
 
 fn (mut p Parse) parse_call_expression() !ast.Node {
@@ -543,6 +564,7 @@ pub fn (mut proc Parse) walk() ![]ast.Node {
 				return_node << proc.parse_expression()!
 			}
 			token.Identifier {
+				
 				return_node << proc.parse_identifier()!
 			}
 			token.EOF {
@@ -550,7 +572,9 @@ pub fn (mut proc Parse) walk() ![]ast.Node {
 			}
 			else {}
 		}
-		proc.next() or { break }
+		if proc.next()!{
+			break
+		}
 	}
 
 	return return_node
