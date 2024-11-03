@@ -153,15 +153,19 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 	}
 }
 
+fn (l Lex) check_if_in_reserved_symbol(identifier string) string {
+	for key, value in grammer.reserved_symbols {
+		if identifier == key || identifier in value {
+			return key
+		}
+	}
+	return ''
+}
+
 fn (mut l Lex) match_reserved_symbols(identifier string) !token.Token {
 	mut ret_ident := token.Identifier{
 		value:    identifier
-		reserved: ''
-	}
-	for key, value in grammer.reserved_symbols {
-		if identifier == key || identifier in value {
-			ret_ident.reserved = key
-		}
+		reserved: l.check_if_in_reserved_symbol(identifier)
 	}
 
 	if ret_ident.reserved != 'import' && ret_ident.reserved != 'as' {
@@ -194,19 +198,16 @@ fn (mut l Lex) match_reserved_symbols(identifier string) !token.Token {
 			return l.error_generator('v block', errors_df.ErrorCantFindExpectedToken{
 				token: 'token "} end"'
 			})
-		} 
+		}
 
-		value_v_block := l.file_data[curr_token_position+1..next_index]
+		value_v_block := l.file_data[curr_token_position + 1..next_index]
 
 		l.skip_till(next_index + 6)
 
 		return token.Token{
-			token_type: token.VBlock{
-				value_v_block
-			}
-			range: [curr_token_position, next_index+6]
+			token_type: token.VBlock{value_v_block}
+			range:      [curr_token_position, next_index + 6]
 		}
-
 	}
 
 	return token.Token{
@@ -267,10 +268,15 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 	mut return_str := first_char.ascii_str()
 
+	mut check_string_has_reserved := false
 	for {
 		peek := l.peek() or { break }
 
-		if peek.is_letter() || peek.is_digit() || peek == `_` || peek == `.` {
+		if peek.is_letter() || peek.is_digit() || peek == `_` {
+			return_str += peek.ascii_str()
+			l.consume_char()
+		} else if peek == `.` {
+			check_string_has_reserved = true
 			return_str += peek.ascii_str()
 			l.consume_char()
 		} else {
@@ -278,6 +284,23 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 				free(peek)
 			}
 			break
+		}
+	}
+
+	if check_string_has_reserved {
+		for key, value in grammer.reserved_symbols {
+			if return_str.contains(key) {
+				return l.error_generator('"." character', errors_df.ErrorTryingToUseReservedIdentifier{
+					identifier: key
+				})
+			}
+			for _, v in value {
+				if return_str.contains(v) {
+					return l.error_generator('"." character', errors_df.ErrorTryingToUseReservedIdentifier{
+						identifier: v
+					})
+				}
+			}
 		}
 	}
 
