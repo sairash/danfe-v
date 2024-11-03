@@ -207,7 +207,7 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 
 	if !p.check_token_with_name(token.Token{
 		token_type: token.String{}
-	}) {
+	})  {
 		return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
 			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
 			token: '"file" after import for eg. (import "./file_name.df") or (import "file_name") or (import "file_name" as "my_file")'
@@ -217,7 +217,7 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 	mut import_statement := ast.ImportStatement{
 		from_path:    p.cur_file
 		from_module_: p.module_
-		path:         resolve_absolute_path(p.cur_file, (p.parse_factor()! as ast.Litreal).value)
+		path:         resolve_absolute_path(p.cur_file, ( p.parse_factor()! as ast.Litreal).value)
 	}
 
 	if import_statement.from_path == import_statement.path {
@@ -231,13 +231,27 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 		p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 		if !p.check_token_with_name(token.Token{
 			token_type: token.String{}
-		}) {
+		}) && !p.check_token_with_name(token.Token{
+		token_type: token.Identifier{}
+	}) {
 			return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
 				p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
 				token: '"file_aliases" after as for eg. (import "./file_name.df" as "my_file")'
 			}))
 		}
-		import_statement.module_ = (p.parse_factor()! as ast.Litreal).value
+		mut as_value := p.parse_factor()!
+
+		match mut as_value {
+			ast.Identifier{
+				as_value = ast.Litreal{
+					hint: .str
+					from: as_value.from
+					value: as_value.token.value
+				}
+			}
+			else {}
+		}
+		import_statement.module_ = (as_value as ast.Litreal).value
 	}
 
 	return import_statement
