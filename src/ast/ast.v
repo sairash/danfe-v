@@ -65,7 +65,6 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 			}
 			return evl.table[value.get_as_string()] or { return 0, value.get_as_string() }, value.get_as_string()
 		}
-		
 		else {}
 	}
 	return error_gen('eval', 'get_indexed_value', errors_df.ErrorCannotUseIndexKeyOn{
@@ -564,23 +563,25 @@ pub mut:
 }
 
 fn (vb VBlock) eval(process_id string) !EvalOutput {
-	mut ret_val := ''
+	res := os.execute_opt('v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
+		'println(')}\'')!
+	
+	return res.output
 
-	mut cmd := os.Command{
-		path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
-			'println(')}\''
-	}
+	// mut cmd := os.Command{
+	// 	path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
+	// 		'println(')}\''
+	// }
 
-	cmd.start()!
-	for !cmd.eof {
-		line := cmd.read_line()
-		if line != '' {
-			ret_val += line
-		}
-	}
-	cmd.close()!
+	// cmd.start()!
+	// for !cmd.eof {
+	// 	line := cmd.read_line()
+	// 	if line != '' {
+	// 		ret_val += line
+	// 	}
+	// }
+	// cmd.close()!
 
-	return ret_val
 }
 
 pub struct ImportStatement {
