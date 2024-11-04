@@ -33,6 +33,26 @@ fn delete_process_memory(process_id string) {
 	identifier_assignment_tracker.delete(process_id)
 }
 
+pub fn (evl EvalOutput) get_token_type() string {
+	return match evl {
+		string {
+			'string'
+		}
+		int {
+			'int'
+		}
+		f64 {
+			'float'
+		}
+		Table {
+			if evl.is_arr {
+				return 'array'
+			}
+			'table'
+		}
+	}
+}
+
 pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) !(EvalOutput, string) {
 	match evl {
 		Table {
