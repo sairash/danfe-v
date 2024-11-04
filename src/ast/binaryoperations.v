@@ -14,8 +14,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return EvalOutput(left + right)
 		}
-		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "+" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "+"
 		})
 	}
 	'-':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -28,8 +30,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return EvalOutput(left - right)
 		}
-		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "-" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "-"
 		})
 	}
 	'*':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -42,8 +46,22 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return EvalOutput(left * right)
 		}
-		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "*" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "*"
+		})
+	}
+	'^':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
+		if left is int && right is int {
+			return EvalOutput(int(math.powi(left, right)))
+		} else if left is f64 && right is f64 {
+			return EvalOutput(math.pow(left, right))
+		} 
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "^"
 		})
 	}
 	'/':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -68,8 +86,10 @@ const num_ops = {
 			}
 			return EvalOutput(left / right)
 		}
-		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "*" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "/"
 		})
 	}
 	'%':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -82,8 +102,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return EvalOutput(math.fmod(left, right))
 		}
-		return error_gen('eval', 'op', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "%" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "%"
 		})
 	}
 	'==': fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -120,8 +142,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return if left < right { 1 } else { 0 }
 		}
-		return error_gen('eval', 'logical', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "<" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "<"
 		})
 	}
 	'>':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -134,8 +158,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return if left > right { 1 } else { 0 }
 		}
-		return error_gen('eval', 'logical', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using ">" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: ">"
 		})
 	}
 	'>=': fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -148,8 +174,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return if left >= right { 1 } else { 0 }
 		}
-		return error_gen('eval', 'logical', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using ">=" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: ">="
 		})
 	}
 	'<=': fn (left EvalOutput, right EvalOutput) !EvalOutput {
@@ -162,8 +190,10 @@ const num_ops = {
 		} else if left is f64 && right is f64 {
 			return if left <= right { 1 } else { 0 }
 		}
-		return error_gen('eval', 'logical', errors_df.ErrorUnexpectedWhile{
-			while_doing: 'using "<=" operator'
+		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
+			first_token_type: left.get_token_type()
+			second_token_type: right.get_token_type()
+			operator: "<="
 		})
 	}
 }
