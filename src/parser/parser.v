@@ -95,7 +95,6 @@ fn (p &Parse) check_next_with_name_token(expected token.Token) bool {
 fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 	mut left := p.parse_factor()!
 	for {
-		
 		match p.cur_token.token_type {
 			token.Operator {
 				x := p.cur_token.token_type as token.Operator
@@ -107,7 +106,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 				prec := grammer.precedence[x.value] or { break }
 
 				if prec < precedence {
-					break
+					return left
 				}
 
 				p.eat(token.Token{
@@ -120,7 +119,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 
 				match x.value {
 					'&&', '||', '!=', '==', '>', '<', '>=', '<=' {
-						return ast.Logical{
+						left = ast.Logical{
 							operator: x.value
 							left:     left
 							right:    right
@@ -130,7 +129,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 						break
 					}
 					else {
-						return ast.Binary{
+						left = ast.Binary{
 							operator: x.value
 							left:     left
 							right:    right
@@ -138,14 +137,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 					}
 				}
 			}
-			token.Punctuation {
-				x := p.cur_token.token_type as token.Punctuation
-				if !x.open {
-					return left
-				}
-				break
-			}
-			token.EOL, token.Comment, token.EOF, token.Seperator {
+			token.EOL, token.Comment, token.EOF, token.Seperator, token.Punctuation {
 				return left
 			}
 			else {
@@ -303,6 +295,7 @@ fn (mut p Parse) parse_if_statement() !ast.Node {
 	}
 
 	ret_statement.clauses << p.parse_cond_statement(true, ast.Conditions.if_clause)!
+
 
 	for {
 		x := p.cur_token.token_type
@@ -573,11 +566,15 @@ pub fn (mut proc Parse) walk() ![]ast.Node {
 			token.EOF {
 				break
 			}
-			else {}
+			else {
+				if proc.next()!{
+					break
+				}
+			}
 		}
-		if proc.next()!{
-			break
-		}
+		// if proc.next()!{
+		// 	break
+		// }
 	}
 
 	return return_node
