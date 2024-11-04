@@ -243,8 +243,11 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 
 fn (mut p Parse) parse_expression() !ast.Node {
 	match p.cur_token.token_type {
-		token.String, token.Numeric, token.Identifier, token.VBlock {
+		token.String, token.Numeric, token.Identifier {
 			return p.parse_bin_logical_expression(0)
+		}
+		token.VBlock {
+			return p.parse_factor()
 		}
 		token.Punctuation {
 			if p.check_next_with_name_token(token.Token{ token_type: token.Numeric{} }) || p.check_next_with_name_token(token.Token{
