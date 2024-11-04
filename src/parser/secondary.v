@@ -210,7 +210,7 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 	})  {
 		return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
 			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
-			token: '"file" after import for eg. (import "./file_name.df") or (import "file_name") or (import "file_name" as "my_file")'
+			token: '"file" after import for eg. (import "./file_name.df") or (import "file_name") or (import "file_name" as my_file)'
 		}))
 	}
 
@@ -230,13 +230,11 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 	} else {
 		p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 		if !p.check_token_with_name(token.Token{
-			token_type: token.String{}
-		}) && !p.check_token_with_name(token.Token{
 		token_type: token.Identifier{}
 	}) {
 			return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
 				p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
-				token: '"file_aliases" after as for eg. (import "./file_name.df" as "my_file")'
+				token: '"file_aliases" after as for eg. (import "./file_name.df" as my_file)'
 			}))
 		}
 		mut as_value := p.parse_factor()!
