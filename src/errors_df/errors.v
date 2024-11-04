@@ -100,6 +100,18 @@ fn (err ErrorUnexpectedToken) output() string {
 	return 'There was an unexpected token: ${err.token}'
 }
 
+pub struct ErrorCantUseTokenOfTypeForOperaiton {
+pub mut:
+	first_token_type string
+	second_token_type string
+	operator  string
+}
+
+fn (err ErrorCantUseTokenOfTypeForOperaiton) output() string {
+	return 'Can\'t use ${err.operator} on type ${err.first_token_type} and ${err.second_token_type}'
+}
+
+
 pub struct ErrorCantFindExpectedToken {
 pub mut:
 	token string
