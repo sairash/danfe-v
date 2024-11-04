@@ -35,10 +35,28 @@ fn delete_process_memory(process_id string) {
 
 
 fn to_int_f64_or_str(value string) EvalOutput {
-	return strconv.atoi(value) or {
-		return strconv.atof64(value) or {
-			return value
+	mut has_decimal := false
+	mut has_non_numeric := false
+
+	for _, ch in value {
+		if ch == `.` {
+			if has_decimal {
+				has_non_numeric = true
+				break
+			}
+			has_decimal = true
+		} else if !ch.is_digit() {
+			has_non_numeric = true
+			break
 		}
+	}
+
+	if has_non_numeric {
+		return value 
+	} else if has_decimal {
+		return value.f64()
+	} else {
+		return value.int()
 	}
 }
 
