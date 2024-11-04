@@ -33,6 +33,15 @@ fn delete_process_memory(process_id string) {
 	identifier_assignment_tracker.delete(process_id)
 }
 
+
+fn to_int_f64_or_str(value string) EvalOutput {
+	return strconv.atoi(value) or {
+		return strconv.atof64(value) or {
+			return value
+		}
+	}
+}
+
 pub fn (evl EvalOutput) get_token_type() string {
 	return match evl {
 		string {
@@ -586,7 +595,7 @@ fn (vb VBlock) eval(process_id string) !EvalOutput {
 	res := os.execute_opt('v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
 		'println(')}\'')!
 
-	return res.output[..res.output.len - 1]
+	return to_int_f64_or_str(res.output[..res.output.len - 1])
 
 	// mut cmd := os.Command{
 	// 	path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
