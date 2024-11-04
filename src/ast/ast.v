@@ -565,7 +565,7 @@ pub mut:
 fn (vb VBlock) eval(process_id string) !EvalOutput {
 	res := os.execute_opt('v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
 		'println(')}\'')!
-	
+
 	return res.output[..res.output.len - 1]
 
 	// mut cmd := os.Command{
@@ -581,7 +581,6 @@ fn (vb VBlock) eval(process_id string) !EvalOutput {
 	// 	}
 	// }
 	// cmd.close()!
-
 }
 
 pub struct ImportStatement {
@@ -708,14 +707,34 @@ fn (cond &ConditionClause) eval(process_id string) !EvalOutput {
 	}
 
 	if is_condition_met(process_id, cond.condition)! {
+		if cond.body.len == 1 {
+			return Table{
+				table:  {
+					'0': 'value'
+					'1': cond.body[0].eval(process_id)!
+				}
+				is_arr: false
+			}
+		}
 		for val in cond.body {
 			val.eval(process_id)!
 		}
 
-		return 1
+		return Table{
+			table:  {
+				'0': 'value'
+				'1': 1
+			}
+			is_arr: false
+		}
 	}
 
-	return 0
+	return Table{
+		table:  {
+			'0': 'continue'
+		}
+		is_arr: false
+	}
 }
 
 pub struct IfStatement {
@@ -725,12 +744,13 @@ pub mut:
 
 fn (if_statement IfStatement) eval(process_id string) !EvalOutput {
 	for clause in if_statement.clauses {
-		if clause.eval(process_id)! as int == 1 {
-			break
+		ret_value := clause.eval(process_id)! as Table
+		if ret_value.table['0'] or { break } as string == 'value' {
+			return ret_value.table['1'] or { break }
 		}
 	}
 
-	return 1
+	return 0
 }
 
 pub struct BreakStatement {}
