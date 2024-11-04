@@ -266,7 +266,7 @@ fn replace_identifier_in_string(string_value string, from string, process_id str
 		ret_string += string_value[start_index..cur_index] +
 			'${ident.eval(process_id)!.get_as_string()}'
 
-		cur_index = last_index
+		cur_index = last_index + 1
 		start_index = cur_index
 	}
 
