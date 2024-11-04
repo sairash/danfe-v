@@ -566,7 +566,7 @@ fn (vb VBlock) eval(process_id string) !EvalOutput {
 	res := os.execute_opt('v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
 		'println(')}\'')!
 	
-	return res.output
+	return res.output[..res.output.len - 1]
 
 	// mut cmd := os.Command{
 	// 	path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
