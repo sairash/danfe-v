@@ -68,7 +68,7 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 				range:      [l.get_x()]
 			}
 		}
-		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^`, `?` {
+		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^`, `?`, `!` {
 			l.can_import = false
 			return l.match_operators(next_char, l.get_x())
 		}
