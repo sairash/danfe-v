@@ -1,0 +1,7 @@
+import "nested_function" as max.test
+
+max.test.new_val = "test"
+
+println(max.test.greet_me("Danfe"))
+
+println("héllò")

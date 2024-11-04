@@ -1,5 +1,5 @@
 import 'assignment_statement'
-import "../programs_test/print_pyramid.df" as "py"
+import "../programs_test/print_pyramid.df" as py
 
 
 dekhauln("\e[32m")
