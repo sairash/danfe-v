@@ -408,23 +408,24 @@ fn (mut p Parse) parse_factor() !ast.Node {
 
 			x := p.cur_token.token_type as token.Identifier
 
-			p.eat(token.Token{
-				token_type: token.Identifier{
-					value:    x.value
-					reserved: x.reserved
-				}
-			})!
+			mut ret_value := ast.Node(ast.Identifier{
+				token: x
+				from:  p.module_
+			})
 
 			match x.reserved {
 				'true', 'false' {
-					return ast.Litreal{
+					ret_value =  ast.Litreal{
 						hint:  ast.LitrealType.boolean
 						value: x.reserved
 						from: p.module_
 					}
 				}
+				'if' {
+					return p.parse_if_statement()!
+				}
 				'nil' {
-					return ast.Litreal{
+					ret_value = ast.Litreal{
 						hint:  ast.LitrealType.null
 						value: x.reserved
 						from: p.module_
@@ -433,10 +434,14 @@ fn (mut p Parse) parse_factor() !ast.Node {
 				else {}
 			}
 
-			return ast.Identifier{
-				token: x
-				from:  p.module_
-			}
+			p.eat(token.Token{
+				token_type: token.Identifier{
+					value:    x.value
+					reserved: x.reserved
+				}
+			})!
+
+			return ret_value
 		}
 		token.VBlock {
 			return ast.VBlock{
