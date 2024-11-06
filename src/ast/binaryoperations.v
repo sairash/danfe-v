@@ -5,11 +5,11 @@ import errors_df
 
 const num_ops = {
 	'+':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
+		if left is i64 && right is i64 {
 			return EvalOutput(left + right)
-		} else if left is int && right is f64 {
+		} else if left is i64 && right is f64 {
 			return EvalOutput(left + right)
-		} else if left is f64 && right is int {
+		} else if left is f64 && right is i64 {
 			return EvalOutput(left + right)
 		} else if left is f64 && right is f64 {
 			return EvalOutput(left + right)
@@ -21,11 +21,11 @@ const num_ops = {
 		})
 	}
 	'-':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
+		if left is i64 && right is i64 {
 			return EvalOutput(left - right)
-		} else if left is int && right is f64 {
+		} else if left is i64 && right is f64 {
 			return EvalOutput(left - right)
-		} else if left is f64 && right is int {
+		} else if left is f64 && right is i64 {
 			return EvalOutput(left - right)
 		} else if left is f64 && right is f64 {
 			return EvalOutput(left - right)
@@ -37,11 +37,11 @@ const num_ops = {
 		})
 	}
 	'*':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
+		if left is i64 && right is i64 {
 			return EvalOutput(left * right)
-		} else if left is int && right is f64 {
+		} else if left is i64 && right is f64 {
 			return EvalOutput(left * right)
-		} else if left is f64 && right is int {
+		} else if left is f64 && right is i64 {
 			return EvalOutput(left * right)
 		} else if left is f64 && right is f64 {
 			return EvalOutput(left * right)
@@ -53,8 +53,8 @@ const num_ops = {
 		})
 	}
 	'^':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
-			return EvalOutput(int(math.powi(left, right)))
+		if left is i64 && right is i64 {
+			return EvalOutput(i64(math.powi(left, right)))
 		} else if left is f64 && right is f64 {
 			return EvalOutput(math.pow(left, right))
 		} 
@@ -65,23 +65,23 @@ const num_ops = {
 		})
 	}
 	'/':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
-			if right == 0 {
+		if left is i64 && right is i64 {
+			if right == i64(0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
 			return EvalOutput(left / right)
-		} else if left is int && right is f64 {
-			if right == 0.0 {
+		} else if left is i64 && right is f64 {
+			if right == i64(0.0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
 			return EvalOutput(left / right)
-		} else if left is f64 && right is int {
-			if right == 0 {
+		} else if left is f64 && right is i64 {
+			if right == i64(0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
 			return EvalOutput(left / right)
 		} else if left is f64 && right is f64 {
-			if right == 0.0 {
+			if right == i64(0.0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
 			return EvalOutput(left / right)
@@ -93,11 +93,11 @@ const num_ops = {
 		})
 	}
 	'%':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
+		if left is i64 && right is i64 {
 			return EvalOutput(left % right)
-		} else if left is int && right is f64 {
+		} else if left is i64 && right is f64 {
 			return EvalOutput(math.fmod(left, right))
-		} else if left is f64 && right is int {
+		} else if left is f64 && right is i64 {
 			return EvalOutput(math.fmod(left, right))
 		} else if left is f64 && right is f64 {
 			return EvalOutput(math.fmod(left, right))
@@ -110,37 +110,37 @@ const num_ops = {
 	}
 	'==': fn (left EvalOutput, right EvalOutput) !EvalOutput {
 		if left == right {
-			return 1
+			return i64(1)
 		}
-		return 0
+		return i64(0)
 	}
 	'!=': fn (left EvalOutput, right EvalOutput) !EvalOutput {
 		if left != right {
-			return 1
+			return i64(1)
 		}
-		return 0
+		return i64(0)
 	}
 	'||': fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left == EvalOutput(1) || right == EvalOutput(1) {
-			return 1
+		if left == EvalOutput(i64(1)) || right == EvalOutput(i64(1)) {
+			return i64(1)
 		}
-		return 0
+		return i64(0)
 	}
 	'&&': fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left == EvalOutput(1) && right == EvalOutput(1) {
-			return 1
+		if left == EvalOutput(i64(1)) && right == EvalOutput(i64(1)) {
+			return i64(1)
 		}
-		return 0
+		return i64(0)
 	}
 	'<':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
-			return if left < right { 1 } else { 0 }
-		} else if left is int && right is f64 {
-			return if left < right { 1 } else { 0 }
-		} else if left is f64 && right is int {
-			return if left < right { 1 } else { 0 }
+		if left is i64 && right is i64 {
+			return if left < right { i64(1) } else { i64(0) }
+		} else if left is i64 && right is f64 {
+			return if left < right { i64(1) } else { i64(0) }
+		} else if left is f64 && right is i64 {
+			return if left < right { i64(1) } else { i64(0) }
 		} else if left is f64 && right is f64 {
-			return if left < right { 1 } else { 0 }
+			return if left < right { i64(1) } else { i64(0) }
 		}
 		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
 			first_token_type: left.get_token_type()
@@ -149,14 +149,14 @@ const num_ops = {
 		})
 	}
 	'>':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
-			return if left > right { 1 } else { 0 }
-		} else if left is int && right is f64 {
-			return if left > right { 1 } else { 0 }
-		} else if left is f64 && right is int {
-			return if left > right { 1 } else { 0 }
+		if left is i64 && right is i64 {
+			return if left > right { i64(1) } else { i64(0) }
+		} else if left is i64 && right is f64 {
+			return if left > right { i64(1) } else { i64(0) }
+		} else if left is f64 && right is i64 {
+			return if left > right { i64(1) } else { i64(0) }
 		} else if left is f64 && right is f64 {
-			return if left > right { 1 } else { 0 }
+			return if left > right { i64(1) } else { i64(0) }
 		}
 		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
 			first_token_type: left.get_token_type()
@@ -165,14 +165,14 @@ const num_ops = {
 		})
 	}
 	'>=': fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
-			return if left >= right { 1 } else { 0 }
-		} else if left is int && right is f64 {
-			return if left >= right { 1 } else { 0 }
-		} else if left is f64 && right is int {
-			return if left >= right { 1 } else { 0 }
+		if left is i64 && right is i64 {
+			return if left >= right { i64(1) } else { i64(0) }
+		} else if left is i64 && right is f64 {
+			return if left >= right { i64(1) } else { i64(0) }
+		} else if left is f64 && right is i64 {
+			return if left >= right { i64(1) } else { i64(0) }
 		} else if left is f64 && right is f64 {
-			return if left >= right { 1 } else { 0 }
+			return if left >= right { i64(1) } else { i64(0) }
 		}
 		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
 			first_token_type: left.get_token_type()
@@ -181,14 +181,14 @@ const num_ops = {
 		})
 	}
 	'<=': fn (left EvalOutput, right EvalOutput) !EvalOutput {
-		if left is int && right is int {
-			return if left <= right { 1 } else { 0 }
-		} else if left is int && right is f64 {
-			return if left <= right { 1 } else { 0 }
-		} else if left is f64 && right is int {
-			return if left <= right { 1 } else { 0 }
+		if left is i64 && right is i64 {
+			return if left <= right { i64(1) } else { i64(0) }
+		} else if left is i64 && right is f64 {
+			return if left <= right { i64(1) } else { i64(0) }
+		} else if left is f64 && right is i64 {
+			return if left <= right { i64(1) } else { i64(0) }
 		} else if left is f64 && right is f64 {
-			return if left <= right { 1 } else { 0 }
+			return if left <= right { i64(1) } else { i64(0) }
 		}
 		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
 			first_token_type: left.get_token_type()

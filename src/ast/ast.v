@@ -22,7 +22,7 @@ mut:
 	is_arr bool
 }
 
-type EvalOutput = string | int | f64 | Table
+type EvalOutput = string | i64 | f64 | Table
 
 fn delete_process_memory(process_id string) {
 	for _, var_name in identifier_assignment_tracker[process_id] {
@@ -32,7 +32,6 @@ fn delete_process_memory(process_id string) {
 	}
 	identifier_assignment_tracker.delete(process_id)
 }
-
 
 fn to_int_f64_or_str(value string) EvalOutput {
 	mut has_decimal := false
@@ -52,11 +51,11 @@ fn to_int_f64_or_str(value string) EvalOutput {
 	}
 
 	if has_non_numeric {
-		return value 
+		return value
 	} else if has_decimal {
 		return value.f64()
 	} else {
-		return value.int()
+		return value.i64()
 	}
 }
 
@@ -65,7 +64,7 @@ pub fn (evl EvalOutput) get_token_type() string {
 		string {
 			'string'
 		}
-		int {
+		i64 {
 			'int'
 		}
 		f64 {
@@ -85,7 +84,7 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 		Table {
 			if evl.is_arr {
 				match value {
-					int {
+					i64 {
 						if value < evl.len {
 							return evl.table['${value}'] or {
 								return error_gen('eval', 'get_indexed_value', errors_df.ErrorArrayOutOfRange{
@@ -110,7 +109,22 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 					}
 				}
 			}
-			return evl.table[value.get_as_string()] or { return 0, value.get_as_string() }, value.get_as_string()
+			return evl.table[value.get_as_string()] or { return i64(0), value.get_as_string() }, value.get_as_string()
+		}
+		string {
+			match value {
+				i64 {
+					if value < evl.len {
+						return evl[value].ascii_str(), '${value}'
+					}
+				}
+				else {}
+			}
+			return error_gen('eval', 'string_get_indexed_value', errors_df.ErrorArrayOutOfRange{
+				total_len:     evl.len
+				trying_to_get: value.get_as_string()
+				name_of_var:   name_of_var
+			})
 		}
 		else {}
 	}
@@ -133,11 +147,11 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 		Table {
 			if evaluation.is_arr {
 				match last_index {
-					int {
+					i64 {
 						if last_index < evaluation.len {
 							evaluation.table['${last_index}'] = value
 							evaluation.len = evaluation.table.keys().len
-							return 1
+							return i64(1)
 						}
 						return error_gen('eval', 'set_indexed_value', errors_df.ErrorArrayOutOfRange{
 							total_len:     evaluation.len
@@ -149,7 +163,7 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 						evaluation.table[last_index] = value
 						evaluation.len = evaluation.table.keys().len
 						evaluation.is_arr = false
-						return 1
+						return i64(1)
 					}
 					else {
 						return error_gen('eval', 'set_indexed_value', errors_df.ErrorArrayOutOfRange{
@@ -162,7 +176,7 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 			}
 			evaluation.table[last_index.get_as_string()] = value
 			evaluation.len = evaluation.table.keys().len
-			return 1
+			return i64(1)
 		}
 		else {}
 	}
@@ -177,7 +191,7 @@ pub fn (evl EvalOutput) is_empty() bool {
 		string {
 			return evl == ''
 		}
-		int {
+		i64 {
 			return evl == 0
 		}
 		f64 {
@@ -197,11 +211,11 @@ fn is_condition_met(process_id string, condition ?Node) !bool {
 		string {
 			return cond_eval != ''
 		}
-		int {
-			return cond_eval == 1
+		i64 {
+			return cond_eval == i64(1)
 		}
 		f64 {
-			return cond_eval == 1.0
+			return cond_eval == f64(1.0)
 		}
 		Table {
 			return cond_eval.len != 0
@@ -214,7 +228,7 @@ pub fn (evl EvalOutput) get_as_string() string {
 		string {
 			evl
 		}
-		int, f64 {
+		i64, f64 {
 			evl.str()
 		}
 		Table {
@@ -362,7 +376,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id string) !EvalOutput 
 		}
 	}
 
-	return 0
+	return i64(0)
 }
 
 pub fn set_if_module_not_already_init(full_module_ string, module_ string) bool {
@@ -426,7 +440,7 @@ pub mut:
 fn (li Litreal) eval(process_id string) !EvalOutput {
 	match li.hint {
 		.integer {
-			return EvalOutput(li.value.int())
+			return EvalOutput(li.value.i64())
 		}
 		.floating_point {
 			return EvalOutput(strconv.atof64(li.value)!)
@@ -436,12 +450,12 @@ fn (li Litreal) eval(process_id string) !EvalOutput {
 		}
 		.boolean {
 			if li.value == 'true' {
-				return 1
+				return i64(1)
 			}
-			return 0
+			return i64(0)
 		}
 		.null {
-			return 0
+			return i64(0)
 		}
 	}
 	return error_gen('eval', 'litreal', errors_df.ErrorUnsupported{})
@@ -458,7 +472,7 @@ fn (bi Binary) eval(process_id string) !EvalOutput {
 	left_eval := bi.left.eval(process_id)!
 	right_eval := bi.right.eval(process_id)!
 
-	if (left_eval is f64 && right_eval is f64) || (left_eval is int && right_eval is int) {
+	if (left_eval is f64 && right_eval is f64) || (left_eval is i64 && right_eval is i64) {
 		if bi.operator in num_ops {
 			return num_ops[bi.operator](left_eval, right_eval)
 		} else {
@@ -481,7 +495,7 @@ fn (bi Binary) eval(process_id string) !EvalOutput {
 				}
 				return '${left_eval as string}${right_eval as string}'
 			}
-			int {
+			i64 {
 				if bi.operator != '*' {
 					return error_gen('eval', 'binary', errors_df.ErrorBinaryOperationUnsupported{
 						type_of_value: 'str'
@@ -600,7 +614,7 @@ pub mut:
 
 fn (ds DelStatement) eval(process_id string) !EvalOutput {
 	identifier_value_map.delete(gen_map_key(ds.variable.from, process_id, ds.variable.token.value))
-	return 1
+	return i64(1)
 }
 
 pub struct VBlock {
@@ -611,9 +625,9 @@ pub mut:
 
 fn (vb VBlock) eval(process_id string) !EvalOutput {
 	res := os.execute_opt('v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
-		'println(')}\'')!
+		'print(')}\'')!
 
-	return to_int_f64_or_str(res.output[..res.output.len - 1])
+	return to_int_f64_or_str(res.output)
 
 	// mut cmd := os.Command{
 	// 	path: 'v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
@@ -709,7 +723,7 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 				'=' {}
 				'?=' {
 					if !var_.eval(process_id)!.is_empty() {
-						return 0
+						return i64(0)
 					}
 				}
 				else {
@@ -720,7 +734,7 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 			}
 
 			var_.set_value(process_id, asss.init.eval(process_id)!, false)
-			return 1
+			return i64(1)
 		}
 		IndexExpression {
 			mut eval_output := var_.base.eval(process_id)!
@@ -732,6 +746,7 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 
 	return error_gen('eval', 'assignment', errors_df.ErrorCanAssignToIdenifiersArrayAndTablesOnly{})
 }
+
 
 pub enum Conditions {
 	if_clause
@@ -770,7 +785,7 @@ fn (cond &ConditionClause) eval(process_id string) !EvalOutput {
 		return Table{
 			table:  {
 				'0': 'value'
-				'1': 1
+				'1': i64(1)
 			}
 			is_arr: false
 		}
@@ -797,7 +812,7 @@ fn (if_statement IfStatement) eval(process_id string) !EvalOutput {
 		}
 	}
 
-	return 0
+	return i64(0)
 }
 
 pub struct BreakStatement {}
@@ -805,9 +820,9 @@ pub struct BreakStatement {}
 fn (br BreakStatement) eval(process_id string) !EvalOutput {
 	program_state_map[process_id] = ProgramStateStore{
 		hint:  ProgramState.break_
-		value: 0
+		value: i64(0)
 	}
-	return 1
+	return i64(1)
 }
 
 pub struct ReturnStatement {
@@ -820,7 +835,7 @@ fn (rt ReturnStatement) eval(process_id string) !EvalOutput {
 		hint:  ProgramState.return_
 		value: rt.value.eval(process_id)!
 	}
-	return 1
+	return i64(1)
 }
 
 pub struct ContinueStatement {}
@@ -828,9 +843,9 @@ pub struct ContinueStatement {}
 fn (br ContinueStatement) eval(process_id string) !EvalOutput {
 	program_state_map[process_id] = ProgramStateStore{
 		hint:  ProgramState.continue_
-		value: 0
+		value: i64(0)
 	}
-	return 1
+	return i64(1)
 }
 
 pub struct ForStatement {
@@ -875,7 +890,7 @@ fn (for_st ForStatement) eval(process_id string) !EvalOutput {
 		}
 	}
 
-	return 0
+	return i64(0)
 }
 
 pub struct FunctionDeclaration {
@@ -903,7 +918,7 @@ fn (fd FunctionDeclaration) eval(process_id string) !EvalOutput {
 		body:       fd.body
 	}
 
-	return 1
+	return i64(1)
 }
 
 pub struct CallExpression {
@@ -951,13 +966,59 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 		}
 		'len' {
 			if ce.arguments.len != 1 {
-				return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
+				return error_gen('eval', 'len', errors_df.ErrorArgumentsMisMatch{
 					func_name:       ce.base.token.value
 					expected_amount: '1'
 					found_amount:    '${ce.arguments.len}'
 				})
 			}
 			return len_reserved_function(new_process_id, ce.arguments[0])
+		}
+		'int' {
+			if ce.arguments.len != 1 {
+				return error_gen('eval', 'int', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			return int_reserved_function(new_process_id, ce.arguments[0])
+		}
+		'float' {
+			if ce.arguments.len != 1 {
+				return error_gen('eval', 'float', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			eval_output := ce.arguments[0].eval(process_id)!
+			return match eval_output {
+				i64 {
+					f64(eval_output)
+				}
+				f64 {
+					eval_output
+				}
+				string {
+					strconv.atof64(eval_output)!
+				}
+				else {
+					error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'F64 | String | int|'})
+				}
+			}
+		}
+		'string' {
+			if ce.arguments.len != 1 {
+				return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			eval_output := ce.arguments[0].eval(process_id)!
+			return '${eval_output.get_as_string()}'
+
 		}
 		'' {
 			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {
@@ -978,7 +1039,7 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 	// 	args.eval()!
 	// }
 
-	return EvalOutput(0)
+	return i64(0)
 	// return error_gen('eval', 'call_exp', errors_df.ErrorUnsupported{})
 }
 

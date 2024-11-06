@@ -2,6 +2,7 @@ module ast
 
 import os
 import errors_df
+import strconv
 
 fn print_reserved_function(process_id string, args []Node, new_line bool) ! {
 	for arg in args {
@@ -30,10 +31,29 @@ fn len_reserved_function(process_id string, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return match eval_output {
 		Table, string {
-			eval_output.len
+			i64(eval_output.len)
 		}
 		else {
-			error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'Array | String | Table in len()'})
+			return error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'Array | String | Table in len()'})
 		}
 	}
 }
+
+fn int_reserved_function(process_id string, arg Node) !EvalOutput {
+	eval_output := arg.eval(process_id)!
+	return match eval_output {
+		i64 {
+			eval_output
+		}
+		f64 {
+			i64(eval_output)
+		}
+		string {
+			i64(strconv.atoi(eval_output)!)
+		}
+		else {
+			error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'F64 | String | int|'})
+		}
+	}
+}
+
