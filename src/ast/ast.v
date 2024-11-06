@@ -514,6 +514,7 @@ fn (li Litreal) eval(process_id string) !EvalOutput {
 	return error_gen('eval', 'litreal', errors_df.ErrorUnsupported{})
 }
 
+
 pub struct Binary {
 pub mut:
 	operator string
@@ -1125,6 +1126,20 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 			}
 			eval_output := ce.arguments[0].eval(process_id)!
 			return '${eval_output.get_as_string()}'
+		}
+		'panic' {
+			if ce.arguments.len != 1 {
+				return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			eval_output := ce.arguments[0].eval(process_id)!
+			
+			return error_gen("system", "panic", errors_df.ErrorCustomError{
+				eval_output.get_as_string()
+			})
 		}
 		'' {
 			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {

@@ -91,6 +91,17 @@ fn (err ErrorImportCycleDetected) output() string {
 	return 'Import Cycle Detected. From: ${err.from_file}, Detected: ${err.detected_file}'
 }
 
+
+pub struct ErrorCustomError {
+pub mut:
+	statement string
+}
+
+fn (err ErrorCustomError) output() string {
+	return 'Error: ${err.statement}'
+}
+
+
 pub struct ErrorUnexpectedToken {
 pub mut:
 	token string
