@@ -444,8 +444,9 @@ fn (mut p Parse) parse_factor() !ast.Node {
 			return ret_value
 		}
 		token.VBlock {
+			p.eat_with_name_token(token.Token{token_type: token.VBlock{}})!
 			return ast.VBlock{
-				v_code: p.cur_token.get_value()
+				v_code: p.prev_token.get_value()
 				from:   p.module_
 			}
 		}
@@ -465,6 +466,29 @@ fn (mut p Parse) parse_factor() !ast.Node {
 				hint:  lit_type
 				value: x.value
 				from: p.module_
+			}
+		}
+		token.Operator{
+			if p.check_token(token.Token{
+				token_type: token.Operator{
+					"!"
+				}
+			}) || p.check_token(token.Token{
+				token_type: token.Operator{
+					"-"
+				}
+			}) {
+				op_ := p.cur_token.get_value()
+				p.eat(token.Token{
+					token_type: token.Operator{
+						op_
+					}
+				})!
+
+				return ast.UnaryExpression {
+					op_
+					p.parse_expression()!
+				}
 			}
 		}
 		token.Punctuation {
