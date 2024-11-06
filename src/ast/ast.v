@@ -133,7 +133,7 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 	})
 }
 
-pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, name_of_var string, process_id string, force_insert bool) !EvalOutput {
+pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutput, name_of_var string, process_id string, insert_op string) !EvalOutput {
 	mut evaluation := evl
 	mut name := name_of_var
 
@@ -148,10 +148,25 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 			if evaluation.is_arr {
 				match last_index {
 					i64 {
-						if force_insert {
-							evaluation.table['${evaluation.len + 1}'] = value
+						if insert_op == "<<" {
+							evaluation.table['${evaluation.len}'] = value
 							evaluation.len = evaluation.len + 1
 							return i64(1)
+						}else if insert_op == ">>" {
+							if evaluation.len <= 0 {
+								return error_gen('eval', 'pop_value', errors_df.ErrorArrayOutOfRange{
+									total_len:     evaluation.len
+									trying_to_get: '${value}'
+									name_of_var:   name
+								})
+							}
+
+							unsafe {
+								evaluation.len = evaluation.len - 1
+								value_to_reutrn := evaluation.table["${evaluation.len}"]
+								evaluation.table.delete("${evaluation.len}")
+								return value_to_reutrn
+							}
 						}
 
 						if last_index < evaluation.len {
@@ -159,7 +174,7 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 							evaluation.len = evaluation.table.keys().len
 							return i64(1)
 						}
-						return error_gen('eval', 'set_indexed_value', errors_df.ErrorArrayOutOfRange{
+						return error_gen('eval', 'update_indexed_value', errors_df.ErrorArrayOutOfRange{
 							total_len:     evaluation.len
 							trying_to_get: '${value}'
 							name_of_var:   name
@@ -172,7 +187,7 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 						return i64(1)
 					}
 					else {
-						return error_gen('eval', 'set_indexed_value', errors_df.ErrorArrayOutOfRange{
+						return error_gen('eval', 'update_indexed_value', errors_df.ErrorArrayOutOfRange{
 							total_len:     evaluation.len
 							trying_to_get: value.get_as_string()
 							name_of_var:   name
@@ -180,11 +195,28 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 					}
 				}
 			}
-			if force_insert {
+			
+			if insert_op == "<<" {
 				// Randomly adds a key to the map with the table
 				evaluation.table[gen_process_id('')] = value
 				evaluation.len = evaluation.len + 1
 				return i64(1)
+			}else if insert_op == ">>" {
+				if evaluation.len <= 0 {
+					return error_gen('eval', 'pop_value', errors_df.ErrorArrayOutOfRange{
+						total_len:     evaluation.len
+						trying_to_get: '${value}'
+						name_of_var:   name
+					})
+				}
+
+				last_key := evaluation.table.keys()[evaluation.len - 1]
+				unsafe {
+					evaluation.len = evaluation.len - 1
+					value_to_reutrn := evaluation.table[last_key]
+					evaluation.table.delete(last_key)
+					return value_to_reutrn
+				}
 			}
 			evaluation.table[last_index.get_as_string()] = value
 			evaluation.len = evaluation.table.keys().len
@@ -193,7 +225,7 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 		else {}
 	}
 
-	return error_gen('eval', 'set_indexed_value', errors_df.ErrorCannotUseIndexKeyOn{
+	return error_gen('eval', 'update_indexed_value', errors_df.ErrorCannotUseIndexKeyOn{
 		name_of_var: name
 	})
 }
@@ -738,17 +770,17 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 						return i64(0)
 					}
 				}
-				'<<' {
+				'<<', '>>' {
 					mut eval_output := var_.eval(process_id)!
 					ident_token := eval_output.get_token_type()
 					if ident_token == 'table' || ident_token == 'array' {
-						return eval_output.set_indexed_value([
+						return eval_output.update_indexed_value([
 							Node(Litreal{
 								hint:  .integer
 								value: '0'
 								from:  var_.from
 							}),
-						], asss.init.eval(process_id)!, var_.from, process_id, true)
+						], asss.init.eval(process_id)!, var_.from, process_id, asss.hint)
 					}
 					return error_gen('eval', 'push', errors_df.ErrorUnexpectedToken{
 						token: asss.hint
@@ -765,12 +797,8 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 			return i64(1)
 		}
 		IndexExpression {
-			mut force_insert := false
 			match asss.hint {
-				'=' {}
-				'<<' {
-					force_insert = true
-				}
+				'<<', '>>', '=' {}
 				else {
 					return error_gen('eval', 'insert', errors_df.ErrorUnexpectedToken{
 						token: asss.hint
@@ -778,8 +806,8 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 				}
 			}
 			mut eval_output := var_.base.eval(process_id)!
-			return eval_output.set_indexed_value(var_.indexes, asss.init.eval(process_id)!,
-				var_.base.from, process_id, force_insert)
+			return eval_output.update_indexed_value(var_.indexes, asss.init.eval(process_id)!,
+				var_.base.from, process_id, asss.hint)
 		}
 		else {}
 	}

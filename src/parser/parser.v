@@ -115,6 +115,19 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 					}
 				})!
 
+				if x.value == '>>' {
+					left = ast.AssignmentStatement{
+						hint:     '>>'
+						variable: left
+						init:     ast.Node(ast.Litreal{
+							hint:  .integer
+							value: '0'
+							from:  p.module_
+						})
+					}
+					continue
+				}
+
 				right := p.parse_bin_logical_expression(prec)!
 
 				match x.value {
@@ -125,7 +138,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 							right:    right
 						}
 					}
-					'=', '?=' {
+					'=', '?=', '<<' {
 						break
 					}
 					else {
