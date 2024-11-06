@@ -242,14 +242,25 @@ fn (mut p Parse) parse_expression() !ast.Node {
 			return p.parse_factor()
 		}
 		token.Punctuation {
-			if p.check_next_with_name_token(token.Token{ token_type: token.Numeric{} }) || p.check_next_with_name_token(token.Token{
-				token_type: token.String{}
-			}) {
+			cur_token_value := p.cur_token.get_value()
+
+			if cur_token_value == '[' {
+				return p.parse_factor()
+			} else if cur_token_value == '(' {
 				return p.parse_bin_logical_expression(0)
 			}
-
-			if p.cur_token.get_value() == '[' {
-				return p.parse_factor()
+		}
+		token.Operator {
+			if p.check_token(token.Token{
+				token_type: token.Operator{
+					"!"
+				}
+			}) || p.check_token(token.Token{
+				token_type: token.Operator{
+					"-"
+				}
+			}) {
+				return p.parse_factor()!
 			}
 		}
 		else {}
