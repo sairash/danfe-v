@@ -747,6 +747,36 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 	return error_gen('eval', 'assignment', errors_df.ErrorCanAssignToIdenifiersArrayAndTablesOnly{})
 }
 
+pub struct UnaryExpression {
+pub mut:
+	operator string
+	argument Node
+}
+
+fn (unary_ &UnaryExpression) eval(process_id string) !EvalOutput {
+	match unary_.operator {
+		'-' {
+			argument_evalualted := unary_.argument.eval(process_id)!
+			match argument_evalualted {
+				i64 {
+					return argument_evalualted * -1
+				}
+				f64 {
+					return argument_evalualted * -1
+				}
+				else {
+					return error_gen('eval', 'unary', errors_df.ErrorNeededAfterInit{'-', argument_evalualted.get_token_type()})
+				}
+			}
+		}
+		'!' {
+			return if !is_condition_met(process_id, unary_.argument)! { i64(1) } else { i64(0) }
+		}
+		else {
+			return error_gen('eval', 'unary', errors_df.ErrorUnexpectedToken{unary_.operator})
+		}
+	}
+}
 
 pub enum Conditions {
 	if_clause
