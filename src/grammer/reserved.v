@@ -1,14 +1,14 @@
 module grammer
 
 pub const reserved_symbols = {
-	'import':     ['ayat', 'prayog', 'include']
+	'import':     ['prayog']
 	'as':         ['naam']
 	'false':      ['bethik']
 	'true':       ['thik']
-	'function':   ['karya', 'func']
+	'function':   ['karya']
 	'if':         ['yedi']
 	'else':       ['natra']
-	'loop':       ['ghum', 'for', 'while', 'until']
+	'loop':       ['ghum', 'for']
 	'break':      ['todh']
 	'continue':   ['xod']
 	'return':     ['pathau']
