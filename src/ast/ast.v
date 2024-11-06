@@ -142,39 +142,42 @@ pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutpu
 			name_of_var)!
 	}
 
-
 	last_index := indexes[indexes.len - 1].eval(process_id)!
-	if (insert_op == '<<' || insert_op == '>>') && last_index != EvalOutput(i64(-1)) {
-		evaluation, name = evaluation.get_indexed_value(last_index,
-			name_of_var)!
+	if (insert_op == '<<' || insert_op == '>>') && evaluation is Table {
+		if (evaluation as Table).is_arr && last_index != EvalOutput(i64(-1)) {
+			evaluation, name = evaluation.get_indexed_value(last_index, name_of_var)!
+		} else if !(evaluation as Table).is_arr {
+			if last_index.get_as_string() in (evaluation as Table).table {
+				evaluation, name = evaluation.get_indexed_value(last_index, name_of_var)!
+			}
+		}
 	}
-	
+
 	match mut evaluation {
 		Table {
 			if evaluation.is_arr {
+				if insert_op == '<<' {
+					evaluation.table['${evaluation.len}'] = value
+					evaluation.len = evaluation.len + 1
+					return i64(1)
+				} else if insert_op == '>>' {
+					if evaluation.len <= 0 {
+						return error_gen('eval', 'pop_value', errors_df.ErrorArrayOutOfRange{
+							total_len:     evaluation.len
+							trying_to_get: '${value}'
+							name_of_var:   name
+						})
+					}
+
+					unsafe {
+						evaluation.len = evaluation.len - 1
+						value_to_reutrn := evaluation.table['${evaluation.len}']
+						evaluation.table.delete('${evaluation.len}')
+						return value_to_reutrn
+					}
+				}
 				match last_index {
 					i64 {
-						if insert_op == "<<" {
-							evaluation.table['${evaluation.len}'] = value
-							evaluation.len = evaluation.len + 1
-							return i64(1)
-						}else if insert_op == ">>" {
-							if evaluation.len <= 0 {
-								return error_gen('eval', 'pop_value', errors_df.ErrorArrayOutOfRange{
-									total_len:     evaluation.len
-									trying_to_get: '${value}'
-									name_of_var:   name
-								})
-							}
-
-							unsafe {
-								evaluation.len = evaluation.len - 1
-								value_to_reutrn := evaluation.table["${evaluation.len}"]
-								evaluation.table.delete("${evaluation.len}")
-								return value_to_reutrn
-							}
-						}
-
 						if last_index < evaluation.len {
 							evaluation.table['${last_index}'] = value
 							evaluation.len = evaluation.table.keys().len
@@ -201,13 +204,13 @@ pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutpu
 					}
 				}
 			}
-			
-			if insert_op == "<<" {
+
+			if insert_op == '<<' {
 				// Randomly adds a key to the map with the table
 				evaluation.table[gen_process_id('')] = value
 				evaluation.len = evaluation.len + 1
 				return i64(1)
-			}else if insert_op == ">>" {
+			} else if insert_op == '>>' {
 				if evaluation.len <= 0 {
 					return error_gen('eval', 'pop_value', errors_df.ErrorArrayOutOfRange{
 						total_len:     evaluation.len
