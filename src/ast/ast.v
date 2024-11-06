@@ -133,7 +133,7 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 	})
 }
 
-pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, name_of_var string, process_id string) !EvalOutput {
+pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, name_of_var string, process_id string, force_insert bool) !EvalOutput {
 	mut evaluation := evl
 	mut name := name_of_var
 
@@ -148,6 +148,12 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 			if evaluation.is_arr {
 				match last_index {
 					i64 {
+						if force_insert {
+							evaluation.table['${evaluation.len + 1}'] = value
+							evaluation.len = evaluation.len + 1
+							return i64(1)
+						}
+
 						if last_index < evaluation.len {
 							evaluation.table['${last_index}'] = value
 							evaluation.len = evaluation.table.keys().len
@@ -173,6 +179,12 @@ pub fn (mut evl EvalOutput) set_indexed_value(indexes []Node, value EvalOutput, 
 						})
 					}
 				}
+			}
+			if force_insert {
+				// Randomly adds a key to the map with the table
+				evaluation.table[gen_process_id('')] = value
+				evaluation.len = evaluation.len + 1
+				return i64(1)
 			}
 			evaluation.table[last_index.get_as_string()] = value
 			evaluation.len = evaluation.table.keys().len
@@ -726,6 +738,22 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 						return i64(0)
 					}
 				}
+				'<<' {
+					mut eval_output := var_.eval(process_id)!
+					ident_token := eval_output.get_token_type()
+					if ident_token == 'table' || ident_token == 'array' {
+						return eval_output.set_indexed_value([
+							Node(Litreal{
+								hint:  .integer
+								value: '0'
+								from:  var_.from
+							}),
+						], asss.init.eval(process_id)!, var_.from, process_id, true)
+					}
+					return error_gen('eval', 'push', errors_df.ErrorUnexpectedToken{
+						token: asss.hint
+					})
+				}
 				else {
 					return error_gen('eval', 'assignment', errors_df.ErrorUnexpectedToken{
 						token: asss.hint
@@ -737,9 +765,21 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 			return i64(1)
 		}
 		IndexExpression {
+			mut force_insert := false
+			match asss.hint {
+				'=' {}
+				'<<' {
+					force_insert = true
+				}
+				else {
+					return error_gen('eval', 'insert', errors_df.ErrorUnexpectedToken{
+						token: asss.hint
+					})
+				}
+			}
 			mut eval_output := var_.base.eval(process_id)!
 			return eval_output.set_indexed_value(var_.indexes, asss.init.eval(process_id)!,
-				var_.base.from, process_id)
+				var_.base.from, process_id, force_insert)
 		}
 		else {}
 	}
@@ -1048,7 +1088,6 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 			}
 			eval_output := ce.arguments[0].eval(process_id)!
 			return '${eval_output.get_as_string()}'
-
 		}
 		'' {
 			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {
