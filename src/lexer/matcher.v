@@ -169,8 +169,15 @@ fn (mut l Lex) match_reserved_symbols(identifier string) !token.Token {
 	}
 
 	if ret_ident.reserved != 'import' && ret_ident.reserved != 'as' {
-		l.can_import = false
+		if !l.skip_next_can_import {
+			l.can_import = false
+		}else{
+			l.skip_next_can_import = false
+		}
+	}else {
+		l.skip_next_can_import = true
 	}
+
 
 	if ret_ident.reserved == 'v' {
 		l.skip_whitespace() or {

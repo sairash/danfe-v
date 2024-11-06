@@ -6,15 +6,16 @@ import errors_df
 
 pub struct Lex {
 pub mut:
-	x               i64
-	cur_line        int
-	cur_col         int
-	file_data       string
-	file_len        int
-	can_import      bool
-	return_path     string
-	file_path       string
-	bracket_balance []u8
+	x                    i64
+	cur_line             int
+	cur_col              int
+	file_data            string
+	file_len             int
+	can_import           bool
+	skip_next_can_import bool
+	return_path          string
+	file_path            string
+	bracket_balance      []u8
 }
 
 const size = 1024 * 256
@@ -52,15 +53,15 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 			}
 		}
 		`(`, `[`, `{` {
-			l.can_import = false
+			if !l.skip_next_can_import {
+				l.can_import = false
+			}
 			return l.match_punctuation(next_char, true)
 		}
 		`)`, `]`, `}` {
-			l.can_import = false
 			return l.match_punctuation(next_char, false)
 		}
 		`,` {
-			l.can_import = false
 			return token.Token{
 				token_type: token.Seperator{
 					value: next_char.ascii_str()
@@ -69,11 +70,15 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 			}
 		}
 		`+`, `-`, `*`, `/`, `\\`, `%`, `=`, `|`, `&`, `<`, `>`, `^`, `?`, `!` {
-			l.can_import = false
+			if !l.skip_next_can_import {
+				l.can_import = false
+			}
 			return l.match_operators(next_char, l.get_x())
 		}
 		`0`...`9` {
-			l.can_import = false
+			if !l.skip_next_can_import {
+				l.can_import = false
+			}
 			return l.match_number(next_char, l.get_x())
 		}
 		`#` { // comment
@@ -134,7 +139,6 @@ fn (mut l Lex) skip_till(till int) {
 	l.x = till
 }
 
-
 // Peek current character
 fn (l &Lex) peek() ?u8 {
 	if l.x < l.file_len {
@@ -182,14 +186,15 @@ pub fn Lex.new(path string, return_path string) !Lex {
 		}
 	}
 	return Lex{
-		x:               0
-		file_data:       go_through_file_data
-		file_path:       path
-		return_path:     return_path
-		can_import:      true
-		file_len:        go_through_file_data.len
-		cur_col:         1
-		cur_line:        1
-		bracket_balance: []
+		x:                    0
+		file_data:            go_through_file_data
+		file_path:            path
+		return_path:          return_path
+		can_import:           true
+		skip_next_can_import: false
+		file_len:             go_through_file_data.len
+		cur_col:              1
+		cur_line:             1
+		bracket_balance:      []
 	}
 }
