@@ -29,7 +29,7 @@ pub fn gen_custom_error_message(while string, when string, path string, cur_line
 }
 
 // have to use this because I am too dumb to make (22r) work
-pub fn gen_letter(letter string, times int) string {
+pub fn gen_letter(letter string, times i64) string {
 	mut ret_string := ''
 	for i := 0; i < times; i++ {
 		ret_string += letter
