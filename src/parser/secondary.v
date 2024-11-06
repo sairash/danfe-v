@@ -312,7 +312,7 @@ fn (mut p Parse) parse_table_constructor_expression() ![]ast.Node {
 		}
 
 		match p.cur_token.token_type {
-			token.String, token.Numeric, token.VBlock, token.Identifier {
+			token.String, token.Numeric, token.VBlock, token.Identifier, token.Punctuation {
 				parsed_exp := p.parse_expression()!
 
 				if p.check_token(token.Token{
