@@ -99,7 +99,7 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 			token.Operator {
 				x := p.cur_token.token_type as token.Operator
 
-				if x.value == "=>" {
+				if x.value == '=>' {
 					return left
 				}
 
@@ -252,13 +252,9 @@ fn (mut p Parse) parse_expression() !ast.Node {
 		}
 		token.Operator {
 			if p.check_token(token.Token{
-				token_type: token.Operator{
-					"!"
-				}
+				token_type: token.Operator{'!'}
 			}) || p.check_token(token.Token{
-				token_type: token.Operator{
-					"-"
-				}
+				token_type: token.Operator{'-'}
 			}) {
 				return p.parse_factor()!
 			}
@@ -306,7 +302,6 @@ fn (mut p Parse) parse_if_statement() !ast.Node {
 	}
 
 	ret_statement.clauses << p.parse_cond_statement(true, ast.Conditions.if_clause)!
-
 
 	for {
 		x := p.cur_token.token_type
@@ -411,23 +406,11 @@ fn (mut p Parse) parse_assignment() !ast.Node {
 		var_ = p.parse_index_expression()!
 	}
 
-	if p.check_next_token(token.Token{
-		token_type: token.Operator{
-			value: '='
-		}
-	}) || p.check_next_token(token.Token{
-		token_type: token.Operator{
-			value: '?='
-		}
-	}) || p.check_token(token.Token{
-		token_type: token.Operator{
-			value: '='
-		}
-	}) || p.check_token(token.Token{
-		token_type: token.Operator{
-			value: '?='
-		}
-	}) {
+	cur_token_value := p.cur_token.get_value()
+	next_token_value := p.nxt_token.get_value()
+
+	if cur_token_value == '=' || cur_token_value == '?=' || cur_token_value == '<<'
+		|| next_token_value == '=' || next_token_value == '?=' || next_token_value == '<<' {
 		match var_ {
 			ast.Identifier {
 				p.eat_with_name_token(token.Token{
@@ -571,14 +554,13 @@ pub fn (mut proc Parse) walk() ![]ast.Node {
 				return_node << proc.parse_expression()!
 			}
 			token.Identifier {
-				
 				return_node << proc.parse_identifier()!
 			}
 			token.EOF {
 				break
 			}
 			else {
-				if proc.next()!{
+				if proc.next()! {
 					break
 				}
 			}
