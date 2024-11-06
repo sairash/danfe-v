@@ -142,7 +142,13 @@ pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutpu
 			name_of_var)!
 	}
 
+
 	last_index := indexes[indexes.len - 1].eval(process_id)!
+	if (insert_op == '<<' || insert_op == '>>') && last_index != EvalOutput(i64(-1)) {
+		evaluation, name = evaluation.get_indexed_value(last_index,
+			name_of_var)!
+	}
+	
 	match mut evaluation {
 		Table {
 			if evaluation.is_arr {
@@ -777,7 +783,7 @@ fn (asss AssignmentStatement) eval(process_id string) !EvalOutput {
 						return eval_output.update_indexed_value([
 							Node(Litreal{
 								hint:  .integer
-								value: '0'
+								value: '-1'
 								from:  var_.from
 							}),
 						], asss.init.eval(process_id)!, var_.from, process_id, asss.hint)
