@@ -57,3 +57,83 @@ fn int_reserved_function(process_id string, arg Node) !EvalOutput {
 	}
 }
 
+fn assert_print(emote string, test_type string, function_name string) {
+	println('${emote} ${test_type}: ${function_name}')
+}
+
+fn assert_reserved_function(process_id string, arg []Node, func_name string) !EvalOutput {
+	if arg.len < 2 {
+		return error_gen('eval', 'assert', errors_df.ErrorArgumentsMisMatch{
+			func_name:       func_name
+			expected_amount: '>= 1'
+			found_amount:    '${arg.len}'
+		})
+	}
+
+	assert_type := arg[0].eval(process_id)!.get_as_string()
+
+	function_name := arg[1].eval(process_id)!.get_as_string()
+
+	if assert_type == "finish" {
+		assert_print("🟩", "END   ", function_name)
+		return i64(1)
+	}else if assert_type == "start" {
+		assert_print("🟢", "Start ", function_name)
+		return i64(1)
+	}
+
+
+	if arg.len < 3 && arg.len > 4 {
+		return error_gen('eval', 'assert', errors_df.ErrorArgumentsMisMatch{
+			func_name:       func_name
+			expected_amount: '3 | 4'
+			found_amount:    '${arg.len}'
+		})
+	}
+
+	if arg.len == 3 {
+		second_value := arg[2].eval(process_id) or { 
+			if assert_type != "error" {
+				return err
+			}
+			assert_print("❎", "PASS  ", function_name)
+			return i64(1)
+		}
+
+		if !second_value.is_true() && assert_type != "missmatch" {
+			return error_gen('eval', 'assert_mis_match', errors_df.ErrorAssert{
+				function_name: function_name
+				output:        second_value.get_as_string()
+				expected:      ''
+			})
+		}
+	} else if arg.len == 4 {
+		second_value := arg[2].eval(process_id) or { 
+			if assert_type != "error" {
+				return err
+			}
+			assert_print("❎", "PASS  ", function_name)
+			return i64(1)
+		 }
+		third_value := arg[3].eval(process_id) or { 
+			if assert_type != "error" {
+				return err
+			}
+			assert_print("❎", "PASS  ", function_name)
+			return i64(1)
+		}
+		if second_value != third_value  && assert_type != "missmatch" {
+			return error_gen('eval', 'assert_missmatch', errors_df.ErrorAssert{
+				function_name: function_name
+				output:        second_value.get_as_string()
+				expected:      third_value.get_as_string()
+			})
+		}
+	}
+
+	if assert_type == "print" {
+		assert_print("✅", "PASS  ", function_name)
+	}
+
+	return i64(1)
+}

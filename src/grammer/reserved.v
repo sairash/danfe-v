@@ -18,7 +18,7 @@ pub const reserved_symbols = {
 	'del':        ['hatau']
 	'__module__': []
 	// predefined functions
-	'test':       ['pariksan']
+	'assert':     ['pariksan']
 	'panic':      ['truti']
 	'print':      ['dekhau']
 	'println':    ['dekhauln']
