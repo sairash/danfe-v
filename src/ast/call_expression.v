@@ -74,7 +74,7 @@ fn assert_reserved_function(process_id string, arg []Node, func_name string) !Ev
 
 	function_name := arg[1].eval(process_id)!.get_as_string()
 
-	if assert_type == "finish" {
+	if assert_type == "end" {
 		assert_print("🟩", "END   ", function_name)
 		return i64(1)
 	}else if assert_type == "start" {
