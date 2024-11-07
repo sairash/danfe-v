@@ -22,8 +22,13 @@ fn main() {
 				name:          'run'
 				required_args: 1
 				execute:       fn (cmd cli.Command) ! {
-					return interpreter('i', os.abs_path(parser.format_path(cmd.args[0])),
-						'main', 'main')
+					ast.add_args_to_table(cmd.args)
+					for _, x in cmd.args {
+						if x != "-t" {
+							return interpreter('i', os.abs_path(parser.format_path(cmd.args[0])),
+							'main', 'main')
+						}
+					}
 				}
 			},
 		]
