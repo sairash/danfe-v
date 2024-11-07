@@ -1,6 +1,6 @@
 # Binaries for programs and plugins
 main
-
+danfe
 *.exe
 *.exe~
 *.so
@@ -21,7 +21,7 @@ bin/
 
 # vweb and database
 *.db
-
+*.js
 
 docs
 docs/.vitepress/cache
