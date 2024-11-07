@@ -24,6 +24,18 @@ mut:
 
 type EvalOutput = string | i64 | f64 | Table
 
+pub fn add_args_to_table(args []string) {
+	mut arg_table := Table{
+		table: {}
+		is_arr: false
+		len: args.len
+	}
+	for k, v in args {
+		arg_table.table[v] = i64(k)
+	}
+	identifier_value_map["--args"] = arg_table
+}
+
 
 fn delete_process_memory(process_id string) {
 	for _, var_name in identifier_assignment_tracker[process_id] {
