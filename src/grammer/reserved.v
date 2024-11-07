@@ -28,6 +28,8 @@ pub const reserved_symbols = {
 	'int':        ['aanka']
 	'float':      []
 	'string':     ['sabda']
+	'rand_str':   []
+	'rand_int':   []
 	// 'not':      ['hoina']
 	// 'or':       ['ya']
 	// 'and':      ['ra']
