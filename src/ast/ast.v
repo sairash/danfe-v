@@ -256,24 +256,28 @@ pub fn (evl EvalOutput) is_empty() bool {
 	}
 }
 
+fn (evl EvalOutput) is_true() bool {
+	return match evl {
+		string {
+			evl != ''
+		}
+		i64 {
+			evl == i64(1)
+		}
+		f64 {
+			evl == f64(1.0)
+		}
+		Table {
+			evl.len != 0
+		}
+	}
+}
+
 fn is_condition_met(process_id string, condition ?Node) !bool {
 	cond_eval := condition or { return true }
 		.eval(process_id)!
 
-	match cond_eval {
-		string {
-			return cond_eval != ''
-		}
-		i64 {
-			return cond_eval == i64(1)
-		}
-		f64 {
-			return cond_eval == f64(1.0)
-		}
-		Table {
-			return cond_eval.len != 0
-		}
-	}
+	return cond_eval.is_true()
 }
 
 pub fn (evl EvalOutput) get_as_string() string {
@@ -513,7 +517,6 @@ fn (li Litreal) eval(process_id string) !EvalOutput {
 	}
 	return error_gen('eval', 'litreal', errors_df.ErrorUnsupported{})
 }
-
 
 pub struct Binary {
 pub mut:
@@ -1051,6 +1054,53 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 		'println' {
 			print_reserved_function(new_process_id, ce.arguments, true)!
 		}
+		'test' {
+			if ce.arguments.len < 1 {
+				return error_gen('eval', 'test', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '>= 1'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+
+			assert_type := ce.arguments[0].eval(process_id)!.get_as_string()
+
+			if ce.arguments.len < 3 && ce.arguments.len > 4 {
+				return error_gen('eval', 'test', errors_df.ErrorArgumentsMisMatch{
+					func_name:       ce.base.token.value
+					expected_amount: '3 | 4'
+					found_amount:    '${ce.arguments.len}'
+				})
+			}
+			function_name := ce.arguments[1].eval(process_id)!.get_as_string()
+
+			if ce.arguments.len == 3 {
+				second_value := ce.arguments[2].eval(process_id)!
+				if !second_value.is_true() {
+					return error_gen('system', 'panic', errors_df.ErrorAssert{
+						function_name: function_name
+						output:        second_value.get_as_string()
+						expected:      ''
+					})
+				}
+			} else if ce.arguments.len == 4 {
+				second_value := ce.arguments[2].eval(process_id)!
+				third_value := ce.arguments[3].eval(process_id)!
+				if second_value != third_value {
+					return error_gen('system', 'panic', errors_df.ErrorAssert{
+						function_name: function_name
+						output:        second_value.get_as_string()
+						expected:      third_value.get_as_string()
+					})
+				}
+			}
+
+			if assert_type == 'assert_print' {
+				println('✅ PASS: ${function_name}')
+			}
+
+			return i64(1)
+		}
 		'input' {
 			if ce.arguments.len != 1 {
 				return error_gen('eval', 'input', errors_df.ErrorArgumentsMisMatch{
@@ -1136,10 +1186,8 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 				})
 			}
 			eval_output := ce.arguments[0].eval(process_id)!
-			
-			return error_gen("system", "panic", errors_df.ErrorCustomError{
-				eval_output.get_as_string()
-			})
+
+			return error_gen('system', 'panic', errors_df.ErrorCustomError{eval_output.get_as_string()})
 		}
 		'' {
 			return function_value_map[gen_map_key(ce.base.from, process_id, ce.base.token.value)] or {

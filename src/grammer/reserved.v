@@ -17,8 +17,8 @@ pub const reserved_symbols = {
 	'endv':       []
 	'del':        ['hatau']
 	'__module__': []
-	'assert':     []
 	// predefined functions
+	'test':       ['pariksan']
 	'panic':      ['truti']
 	'print':      ['dekhau']
 	'println':    ['dekhauln']

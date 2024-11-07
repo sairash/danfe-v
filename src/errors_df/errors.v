@@ -91,6 +91,20 @@ fn (err ErrorImportCycleDetected) output() string {
 	return 'Import Cycle Detected. From: ${err.from_file}, Detected: ${err.detected_file}'
 }
 
+pub struct ErrorAssert {
+pub mut:
+	function_name string
+	output        string
+	expected      string
+}
+
+fn (err ErrorAssert) output() string {
+	return '\n❌ FAIL: ${err.function_name} \nOutput: ${err.output} , ${if err.expected != '' {
+		'Expected: ' + err.expected
+	} else {
+		''
+	}}'
+}
 
 pub struct ErrorCustomError {
 pub mut:
@@ -100,7 +114,6 @@ pub mut:
 fn (err ErrorCustomError) output() string {
 	return 'Error: ${err.statement}'
 }
-
 
 pub struct ErrorUnexpectedToken {
 pub mut:
@@ -113,15 +126,14 @@ fn (err ErrorUnexpectedToken) output() string {
 
 pub struct ErrorCantUseTokenOfTypeForOperaiton {
 pub mut:
-	first_token_type string
+	first_token_type  string
 	second_token_type string
-	operator  string
+	operator          string
 }
 
 fn (err ErrorCantUseTokenOfTypeForOperaiton) output() string {
 	return 'Can\'t use ${err.operator} on type ${err.first_token_type} and ${err.second_token_type}'
 }
-
 
 pub struct ErrorCantFindExpectedToken {
 pub mut:
@@ -164,7 +176,7 @@ fn (err ErrorNeededAfterInit) output() string {
 }
 
 pub struct ErrorCannotUseIndexKeyOn {
-	pub mut:
+pub mut:
 	name_of_var string
 }
 
@@ -173,18 +185,15 @@ fn (err ErrorCannotUseIndexKeyOn) output() string {
 }
 
 pub struct ErrorArrayOutOfRange {
-	pub mut:
-	total_len int
+pub mut:
+	total_len     int
 	trying_to_get string
-	name_of_var string
+	name_of_var   string
 }
 
 fn (err ErrorArrayOutOfRange) output() string {
 	return 'Array out of range: total length of array "${err.name_of_var}" is: ${err.total_len} : trying to get index ${err.trying_to_get}'
 }
-
-
-
 
 pub struct ErrorCanAssignToIdenifiersArrayAndTablesOnly {
 }
@@ -199,7 +208,6 @@ pub struct ErrorHaveToUseKeyInTable {
 fn (err ErrorHaveToUseKeyInTable) output() string {
 	return 'You have to use "Key" in "Array".'
 }
-
 
 pub struct ErrorCannotUseKeyInArray {
 }
@@ -226,7 +234,7 @@ fn (err ErrorCannotUseTokenIfBefore) output() string {
 }
 
 pub struct ErrorCanDeleteOnlyIdentifiers {
-	pub mut:
+pub mut:
 	del_key string
 }
 
