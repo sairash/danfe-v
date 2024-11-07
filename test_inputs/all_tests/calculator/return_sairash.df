@@ -1,0 +1,5 @@
+sairash = "Sai"
+
+function return_sariash() {
+    return "Sairash!"
+}

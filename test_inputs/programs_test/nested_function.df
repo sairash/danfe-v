@@ -1,0 +1,20 @@
+#region function
+# First Function
+karya greet_me(name){
+    println(new_val)
+    # Nested Function
+    karya greet(){
+        pathau "Hello from, "
+    }
+    pathau greet() + name
+}
+
+# println(greet_me("Danfe"))
+#endregion function
+
+"
+#region output
+# Output
+Hello from, Danfe
+#endregion output
+"

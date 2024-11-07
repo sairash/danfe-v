@@ -1,0 +1,44 @@
+assert("start", "test_loop")
+
+sum = []
+i = 0
+
+for i < 100 {
+    sum << i
+    i = i + 1
+}
+
+assert("print", "test_loop_with_condition", len(sum), 100)
+
+num = 0
+
+for {     # loops forever until stopped
+    num = num + 2
+    if num > 10 {
+        break
+    }
+}
+
+assert("print", "test_loop_forever", num, 12)
+
+
+output = []
+num = 0
+
+for {              # loops forever until stopped
+    num = num + 1
+    if num % 2  {  # num % 2 != 0 
+        continue   # does not execute the instructions bellow
+    }
+    if num > 10 {
+        break      # breaks out of the loop
+    }
+    output << num
+}
+
+output >>
+second_last_value = output >>
+
+assert("print", "test_loop_break_continue", second_last_value, 8)
+
+assert("end", "test_loop")

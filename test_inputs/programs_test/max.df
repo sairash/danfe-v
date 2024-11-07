@@ -1,0 +1,10 @@
+function max(num1, num2) {
+    if num1 > num2 {
+        result = num1;
+    }else {
+        result = num2;
+    }
+    return result;
+}
+
+println(max(1, 3))

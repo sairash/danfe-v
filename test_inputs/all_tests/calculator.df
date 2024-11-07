@@ -1,0 +1,22 @@
+import "./calculator/calc_functions.df" as calc
+import "./calculator/return_sairash.df" as calc.ret_sai
+
+function calculate(first_value, operator, second_value) {
+    first_value = int(first_value)
+    second_value = int(second_value)
+    if operator == "+" {
+        return calc.sum(first_value, second_value)
+    } else if operator == "-" {
+        return calc.sub(first_value, second_value)
+    } else if operator == "*" {
+        return calc.mul(first_value, second_value)
+    } else if operator == "/" {
+        return calc.div(first_value, second_value)
+    } else if operator == "%" {
+        return calc.mod(first_value, second_value)
+    } else if operator == "^" {
+        return calc.pow(first_value, second_value)
+    } else {
+        panic("Operation Not Supported")
+    }
+}

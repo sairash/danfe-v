@@ -1,0 +1,35 @@
+# Test File of the whole programming language goes here
+import 'multi_layer_calculator' as mul_calc
+import './language_test/comment_test'
+import './language_test/assignment'
+import './language_test/delete_test'
+import './language_test/type_test.df'
+import './language_test/operators.df'
+import './language_test/loops.df'
+import './language_test/conditions.df'
+import './language_test/built_in_functions.df'
+import './language_test/v_test.df'
+
+
+
+assert("start", "calculation_function")
+assert("print", "calculating_function_add", mul_calc.calculator.calculate(4, '+', '2'), 6)
+assert("print", "calculating_function_sub", mul_calc.calculator.calculate(1, '-', '2'), -1)
+assert("print", "calculating_function_mul", mul_calc.calculator.calculate(4, '*', '2'), 8)
+assert("print", "calculating_function_div",mul_calc.calculator.calculate(4, '/', '2'), 2)
+assert("print", "calculating_function_mod", mul_calc.calculator.calculate(4, '%', '2'), 0)
+assert("print", "calculating_function_pow", mul_calc.calculator.calculate(4, '^', '2'), 16)
+assert("error", "calculating_function_panic", mul_calc.calculator.calculate(4, '<<', '2'), 16)
+assert("end", "calculation_function")
+
+
+
+assert("start", "import_layers")
+assert("print", "return_sairash_layer_import_var_test", mul_calc.calculator.calc.ret_sai.sairash, "Sai")
+assert("print", "return_sairash_layer_import_func_test", mul_calc.calculator.calc.ret_sai.return_sariash(), "Sairash!")
+assert("print", "update_sairash_layer_import_var_test", mul_calc.update_to_return_sairash_var_sai())
+assert("print", "update_sairash_layer_import_func_test", mul_calc.calculator.calc.ret_sai.sairash, "Sairash")
+assert("end", "import_layers")
+
+
+assert("success", "Successfully completed all the tests, Danfe is good to go!")

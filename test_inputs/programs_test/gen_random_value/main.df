@@ -1,0 +1,6 @@
+import "rand" # You can use file path like import "./rand.df"
+
+length = 5
+random_ascii = rand.gen_random_ascii(length)
+
+println(random_ascii)

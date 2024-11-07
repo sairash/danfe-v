@@ -1,0 +1,15 @@
+first_value = int(input("Enter First Number: "))
+operator = input("Enter The Operation: ")
+second_value = int(input("Enter Second Number: "))
+
+if operator == "+" {
+    println("%i{first_value} %i{operator} %i{second_value} = ", first_value + second_value)
+} else if operator == "-" {
+    println("%i{first_value} %i{operator} %i{second_value} = ", first_value - second_value)
+}else if operator == "*" {
+    println("%i{first_value} %i{operator} %i{second_value} = ", first_value * second_value)
+}else if operator == "/" {
+    println("%i{first_value} %i{operator} %i{second_value} = ", first_value / second_value)
+} else {
+    panic("Enter A valid operation: supported (+, -, *, /)")
+}

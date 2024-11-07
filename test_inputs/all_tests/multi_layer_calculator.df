@@ -1,0 +1,5 @@
+import "calculator"
+
+function update_to_return_sairash_var_sai(){
+    calculator.calc.ret_sai.sairash = "Sairash"
+}

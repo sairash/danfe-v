@@ -1,0 +1,18 @@
+a = 0                               # int value
+b = "10"                            # string value
+c = 10.0                            # float value
+d = [10, c, "danfe"]                # array value
+e = ["x" => a, "y" => b, "z" => d]  # table value
+
+a ?= 15     # Assigns the value of a as 15 if a is 0
+c ?= 15.0   # Assigns the value of c as 15.0 if a is 0
+
+assert("start", "assignment_test")
+
+assert("", "assignment_test_string_interplation","%i{a}", "15")
+assert("", "assignment_test_string_interplation","%i{b}", "10")
+assert("", "assignment_test_string_interplation","%i{c}", "10.0")
+assert("", "assignment_test_string_interplation","%i{d}", "[10, 10.0, danfe]")
+assert("", "assignment_test_string_interplation","%i{e}", "[x => 0, y => 10, z => [10, 10.0, danfe]]")
+
+assert("end", "assignment_test")

@@ -1,0 +1,21 @@
+users = [
+    "bob"=>[
+        "age"=>21
+        "likes"=>[
+            "fruits" => "apple"
+            "color" => "red"
+        ]
+    ]
+    "jack"=>[
+        "age"=>22
+        "likes"=>[
+            "fruits" => "mango"
+            "color" => "yellow"
+            ]
+        ]
+    ]
+
+users["bob"]["likes"]["color"] = "black"
+println(users["bob"]["likes"])
+
+println(len(users))

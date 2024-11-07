@@ -1,0 +1,40 @@
+x = 10 + 5 * 5 - 3
+
+assert("start", "test_arithmetic")
+assert("print", "test_arithmetic_no_bracket_op", x, 32)
+x = 10 + 5 * (5 - 3)
+
+assert("print", "test_arithmetic_with_bracket_op", x, 20)
+
+assert("end", "test_arithmetic")
+
+assert("start", "test_relational")
+
+x = 10
+y = 20
+
+assert("print", "test_relational_less_than", x < y)
+assert("print", "test_relational_more_than", x > y, 0)
+assert("print", "test_relational_equals", x == y, 0)
+assert("print", "test_relational_not_equals", x != y)
+assert("print", "test_relational_greater_than_or_equals", x >= y, 0)
+assert("print", "test_relational_less_than_or_equals", x <= y)
+
+assert("end", "test_relational")
+
+assert("start", "test_logical")
+assert("print", "test_logical_and_true", true && true)
+assert("print", "test_logical_and_false", false && true, 0)
+assert("print", "test_logical_or_true_both", true || true)
+assert("print", "test_logical_or_true_single", false || true)
+assert("print", "test_logical_or_false", false || false, 0)
+assert("end", "test_logical")
+
+assert("start", "test_unary")
+
+a = 1
+assert("print", "test_unary_minus", -a, -1)
+assert("print", "test_unary_not_single", !a, 0)
+assert("print", "test_unary_not_multiple", !!!!a)
+
+assert("end", "test_unary")

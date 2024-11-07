@@ -1,0 +1,129 @@
+assert("start", "test_type_string")
+
+assert("print", "type_test_string_addition", "hello"+" "+"world", "hello world")
+
+name = "Bob"
+assert("print", "test_type_string_len", len(name), 3)
+assert("print", "test_type_string_index", name[0], "B")
+assert("print", "test_type_string_typof", typeof(name), "string")
+
+assert("print", "test_type_string_multiplication", "a" * 5, "aaaaa")
+assert("print", "test_type_string_escape_characters", "\\", "\\")
+
+assert("end", "test_type_string")
+
+assert("start", "test_type_number")
+
+a = 10
+assert("print", "test_type_int_assignment", a, 10)
+assert("print", "test_type_int_typeof", typeof(a), 'int')
+
+num = 1_000_000
+assert("print", "test_type_int_seperator", num, 1000000)
+
+a = 10.5
+assert("print", "test_type_float_assignment", a, 10.5)
+assert("print", "test_type_float_typeof", typeof(a), 'float')
+
+num = 69_122.55_66
+assert("print", "test_type_float_seperator", num, 69122.5566)
+assert("end", "test_type_number")
+
+a = nil
+assert("print", "test_type_nil", a, 0)
+println()
+
+a = true
+b = false 
+assert("print", "test_type_boolean_true_assignment", a, 1)
+assert("print", "test_type_boolean_false_assignment", b, 0)
+assert("print", "test_type_boolean_true_typeof", typeof(a), 'int')
+assert("print", "test_type_boolean_false_typeof", typeof(b), 'int')
+println()
+
+
+assert("start", "test_type_table")
+# array
+users = [["Bob", 21], ["Jack", 22], "Charles"]
+
+assert("print", "test_type_array_assignment", users, [["Bob", 21], ["Jack", 22], "Charles"])
+
+users[2] = ["Charles", 35]
+assert("print", "test_type_array_indexed_assignment", users, [["Bob", 21], ["Jack", 22], ["Charles", 35]])
+assert("print", "test_type_array_len", len(users), 3)
+
+users = [0, 1, 2]
+assert("print", "test_type_array_typeof", typeof(users), 'array')
+
+users["abc"] = [3]
+assert("print", "test_type_array_change_to_table", typeof(users), 'table')
+
+users = [
+    1
+    2
+    3
+    4
+    5
+]
+
+assert("print", "test_type_array_multiline_assignment", typeof(users), 'array')
+
+
+pop_value = users >> 
+assert("print", "test_type_array_pop", pop_value, 5)
+
+users << 6
+assert("print", "test_type_array_push", users, [1,2,3,4,6])
+
+users = ["bob"=>["age"=>21, "likes"=>["fruits" => "apple", "color" => "red"]], 
+        "jack"=>["age"=>22, "likes"=>["fruits" => "mango", "color" => "yellow"]]]
+
+
+assert("print", "test_type_table_assignment", users, ["bob"=>["age"=>21, "likes"=>["fruits" => "apple", "color" => "red"]], 
+        "jack"=>["age"=>22, "likes"=>["fruits" => "mango", "color" => "yellow"]]])
+
+assert("print", "test_type_table_typeof", typeof(users), 'table')
+
+
+users["bob"]["likes"]["color"] = "black"
+
+assert("print", "test_type_table_update_get_indexed_value", users["bob"]["likes"], ["fruits" => "apple", "color" => "black"])
+
+assert("print", "test_type_table_len", len(users), 2)
+
+users_multi_line = [
+    "bob"=>[
+        "age"=>21
+        "likes"=>[
+            "fruits" => "apple"
+            "color" => "black"
+        ]
+    ]
+    "jack"=>[
+        "age"=>22
+        "likes"=>[
+            "fruits" => "mango"
+            "color" => "yellow"
+        ]
+    ]
+]       # behaves same as creating it with a ","
+
+assert("print", "test_type_table_multiline", users_multi_line, users)
+
+del users
+del users_multi_line
+
+table = ["value"=> ["Pusing"]]
+table["value"] << "in"
+
+table << ["Table ."]
+table << 10
+
+assert("print", "test_type_table_push", len(table), 3)
+
+
+x = table >>
+assert("print", "test_type_table_pop", x, 10)
+
+
+assert("end", "test_type_table")

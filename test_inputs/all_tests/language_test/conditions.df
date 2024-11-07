@@ -1,0 +1,25 @@
+assert("start", "test_condtion")
+
+a = 10
+b = 20
+
+string_value = ""
+
+if (a < b) {
+    string_value = '%i{a} < %i{b}'
+} else if a > b {
+    string_value = '%i{a} > %i{b}'
+} else {
+    string_value = "%i{a} == %i{b}"
+}
+
+assert("print", "test_condition_value", string_value, "10 < 20")
+
+num = 777
+
+s = if num % 2 == 0 {'even'} else {'odd'}
+
+
+assert("print", "test_condition_inline", s, "odd")
+
+assert("end", "test_condtion")

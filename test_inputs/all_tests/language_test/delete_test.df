@@ -1,0 +1,4 @@
+x = 10
+del x
+assert("error", "delete_variable_test", x)
+println()
