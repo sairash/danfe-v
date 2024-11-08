@@ -262,6 +262,11 @@ const default_call_operations = {
 			eval_length := ce.arguments[0].eval(process_id)!
 			match eval_length {
 				i64 {
+					
+					if eval_length >= max_int || eval_length <= min_int {
+						return error_gen('eval', 'int_unable_to_convert', errors_df.ErrorI64ToIntConvert{})
+					}
+					
 					length = int(eval_length)
 				}
 				else {

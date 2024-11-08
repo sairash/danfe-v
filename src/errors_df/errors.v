@@ -209,6 +209,15 @@ fn (err ErrorHaveToUseKeyInTable) output() string {
 	return 'You have to use "Key" in "Array".'
 }
 
+
+pub struct ErrorI64ToIntConvert {
+}
+
+fn (err ErrorI64ToIntConvert) output() string {
+	return 'The value provided should be ${min_int} > and < ${max_int}'
+}
+
+
 pub struct ErrorCannotUseKeyInArray {
 }
 
