@@ -1,7 +1,11 @@
 module cli_df
 
+import term
+
 
 pub const version = "0.0.1"
+
+pub const supports_sixel = if term.can_show_color_on_stdout() {1} else {0}
 
 // text color
 pub const reset = '\033[0m'
