@@ -24,7 +24,12 @@ mut:
 
 type EvalOutput = string | i64 | f64 | Table
 
-pub fn add_args_to_table(args []string) {
+pub fn add_args_to_table(full_module_ string, args []string) {
+	if '${full_module_}.__args__' in identifier_value_map {
+		return 
+	}
+
+
 	mut arg_table := Table{
 		table: {}
 		is_arr: false
@@ -33,7 +38,7 @@ pub fn add_args_to_table(args []string) {
 	for k, v in args {
 		arg_table.table[v] = i64(k)
 	}
-	identifier_value_map["--args"] = arg_table
+	identifier_value_map["${full_module_}.__args__"] = arg_table
 }
 
 

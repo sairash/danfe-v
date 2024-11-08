@@ -22,11 +22,10 @@ fn main() {
 				name:          'run'
 				required_args: 1
 				execute:       fn (cmd cli.Command) ! {
-					ast.add_args_to_table(cmd.args)
 					for _, x in cmd.args {
 						if x != "-t" {
 							return interpreter('i', os.abs_path(parser.format_path(cmd.args[0])),
-							'main', 'main')
+							'main', 'main', cmd.args)
 						}
 					}
 				}
@@ -37,9 +36,10 @@ fn main() {
 	app.parse(os.args)
 }
 
-fn interpreter(parent_path string, child_path string, full_module_name string, module_name string) ! {
+fn interpreter(parent_path string, child_path string, full_module_name string, module_name string, args []string) ! {
 	ast.add_import(parent_path, child_path)!
 	ast.set_if_module_not_already_init(full_module_name, module_name)
+	ast.add_args_to_table(full_module_name, args)
 
 	mut pars := parser.Parse.new(child_path, full_module_name)!
 	pars.walk_main()!
@@ -49,7 +49,7 @@ fn interpreter(parent_path string, child_path string, full_module_name string, m
 		match cur {
 			ast.ImportStatement {
 				interpreter(cur.from_path, cur.path, '${cur.from_module_}.${cur.module_}',
-					cur.module_)!
+					cur.module_, args)!
 			}
 			else {
 				cur.eval('')!
