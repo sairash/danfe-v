@@ -240,7 +240,14 @@ pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutpu
 				last_key := evaluation.table.keys()[evaluation.len - 1]
 				unsafe {
 					evaluation.len = evaluation.len - 1
-					value_to_reutrn := evaluation.table[last_key]
+					value_to_reutrn := Table{
+						table: {
+							"0": last_key
+							"1": evaluation.table[last_key]
+						}
+						is_arr: true,
+						len: 2
+					}
 					evaluation.table.delete(last_key)
 					return value_to_reutrn
 				}
