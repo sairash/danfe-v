@@ -113,17 +113,18 @@ assert("print", "test_type_table_multiline", users_multi_line, users)
 del users
 del users_multi_line
 
-table = ["value"=> ["Pusing"]]
-table["value"] << "in"
+table_prog = ["value"=> ["Pusing"]]
+table_prog["value"] << "in"
 
-table << ["Table ."]
-table << 10
-
-assert("print", "test_type_table_push", len(table), 3)
+table_prog << ["Table ."]
+table_prog << 10
 
 
-x = table >>
-assert("print", "test_type_table_pop", x, 10)
+assert("print", "test_type_table_push", len(table_prog), 3)
+
+
+x = table_prog >>
+assert("print", "test_type_table_pop", len(x), 2)
 
 
 assert("end", "test_type_table")
