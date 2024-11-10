@@ -26,6 +26,7 @@ pub const reserved_symbols = {
 	'len':        ['ginti']
 	'typeof':     ['prakar']
 	'int':        ['aanka']
+	'table':      []
 	'float':      []
 	'string':     ['sabda']
 	'rand_str':   []

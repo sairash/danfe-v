@@ -26,21 +26,19 @@ type EvalOutput = string | i64 | f64 | Table
 
 pub fn add_args_to_table(full_module_ string, args []string) {
 	if '${full_module_}.__args__' in identifier_value_map {
-		return 
+		return
 	}
 
-
 	mut arg_table := Table{
-		table: {}
+		table:  {}
 		is_arr: false
-		len: args.len
+		len:    args.len
 	}
 	for k, v in args {
 		arg_table.table[v] = i64(k)
 	}
-	identifier_value_map["${full_module_}.__args__"] = arg_table
+	identifier_value_map['${full_module_}.__args__'] = arg_table
 }
-
 
 fn delete_process_memory(process_id string) {
 	for _, var_name in identifier_assignment_tracker[process_id] {
@@ -241,12 +239,12 @@ pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutpu
 				unsafe {
 					evaluation.len = evaluation.len - 1
 					value_to_reutrn := Table{
-						table: {
-							"0": last_key
-							"1": evaluation.table[last_key]
+						table:  {
+							'0': last_key
+							'1': evaluation.table[last_key]
 						}
-						is_arr: true,
-						len: 2
+						is_arr: true
+						len:    2
 					}
 					evaluation.table.delete(last_key)
 					return value_to_reutrn
@@ -1102,3 +1100,5 @@ fn (ce CallExpression) eval(process_id string) !EvalOutput {
 }
 
 // type Stat = Node
+
+

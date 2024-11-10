@@ -4,6 +4,8 @@ import os
 import errors_df
 import strconv
 import rand
+import lexer
+import token
 
 fn print_reserved_function(process_id string, args []Node, new_line bool) ! {
 	for arg in args {
@@ -145,23 +147,21 @@ fn assert_reserved_function(process_id string, arg []Node, func_name string) !Ev
 }
 
 const default_call_operations = {
-	'print':       fn (process_id string, ce CallExpression) !EvalOutput {
+	'print':    fn (process_id string, ce CallExpression) !EvalOutput {
 		print_reserved_function(process_id, ce.arguments, false)!
 		return i64(0)
 	}
-	'println':     fn (process_id string, ce CallExpression) !EvalOutput {
+	'println':  fn (process_id string, ce CallExpression) !EvalOutput {
 		print_reserved_function(process_id, ce.arguments, true)!
 		return i64(0)
 	}
-	'assert':      fn (process_id string, ce CallExpression) !EvalOutput {
-		if "-t" in (identifier_value_map["--args"] or {
-			return i64(0)
-		} as Table).table {
+	'assert':   fn (process_id string, ce CallExpression) !EvalOutput {
+		if '-t' in (identifier_value_map['main.__args__'] or { return i64(0) } as Table).table {
 			return assert_reserved_function(process_id, ce.arguments, ce.base.token.value)
 		}
 		return i64(0)
 	}
-	'input':       fn (process_id string, ce CallExpression) !EvalOutput {
+	'input':    fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'input', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -171,7 +171,7 @@ const default_call_operations = {
 		}
 		return input_reserved_function(process_id, ce.arguments[0])
 	}
-	'typeof':      fn (process_id string, ce CallExpression) !EvalOutput {
+	'typeof':   fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -182,7 +182,7 @@ const default_call_operations = {
 
 		return type_of_value_reserved_function(process_id, ce.arguments[0])
 	}
-	'len':         fn (process_id string, ce CallExpression) !EvalOutput {
+	'len':      fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'len', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -192,7 +192,7 @@ const default_call_operations = {
 		}
 		return len_reserved_function(process_id, ce.arguments[0])
 	}
-	'int':         fn (process_id string, ce CallExpression) !EvalOutput {
+	'int':      fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'int', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -202,7 +202,7 @@ const default_call_operations = {
 		}
 		return int_reserved_function(process_id, ce.arguments[0])
 	}
-	'float':       fn (process_id string, ce CallExpression) !EvalOutput {
+	'float':    fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'float', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -226,7 +226,7 @@ const default_call_operations = {
 			}
 		}
 	}
-	'string':      fn (process_id string, ce CallExpression) !EvalOutput {
+	'string':   fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -237,7 +237,7 @@ const default_call_operations = {
 		eval_output := ce.arguments[0].eval(process_id)!
 		return '${eval_output.get_as_string()}'
 	}
-	'panic':       fn (process_id string, ce CallExpression) !EvalOutput {
+	'panic':    fn (process_id string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -262,11 +262,10 @@ const default_call_operations = {
 			eval_length := ce.arguments[0].eval(process_id)!
 			match eval_length {
 				i64 {
-					
 					if eval_length >= max_int || eval_length <= min_int {
 						return error_gen('eval', 'int_unable_to_convert', errors_df.ErrorI64ToIntConvert{})
 					}
-					
+
 					length = int(eval_length)
 				}
 				else {
@@ -279,8 +278,169 @@ const default_call_operations = {
 		}
 		return rand.string(length)
 	}
-	'rand_int':    fn (process_id string, ce CallExpression) !EvalOutput {
+	'rand_int': fn (process_id string, ce CallExpression) !EvalOutput {
 		rand_int := rand.i64()
 		return if rand_int < 0 { rand_int * -1 } else { rand_int }
 	}
+	'table':    fn (process_id string, ce CallExpression) !EvalOutput {
+		if ce.arguments.len > 1 {
+			return error_gen('eval', 'rand', errors_df.ErrorArgumentsMisMatch{
+				func_name:       ce.base.token.value
+				expected_amount: '1'
+				found_amount:    '${ce.arguments.len}'
+			})
+		}
+		eval_output := ce.arguments[0].eval(process_id)!
+		return match eval_output {
+			string {
+				small_danfe_table_parser(eval_output)!
+			}
+			else {
+				error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'String'})
+			}
+		}
+	}
+}
+
+struct DataTypeParser {
+mut:
+	lex        lexer.Lex
+	cur_token  token.Token
+	next_token token.Token
+}
+
+fn (mut dtp DataTypeParser) next() ! {
+	dtp.cur_token = dtp.next_token
+	dtp.next_token = dtp.lex.next()!
+}
+
+fn (mut dtp DataTypeParser) parse_table() !EvalOutput {
+	if dtp.cur_token.get_value() != '[' {
+		return error(errors_df.gen_custom_error_message('parsing', 'eval_parse_factor',
+			'', 0, 0, errors_df.ErrorUnexpectedToken{
+			token: "${dtp.cur_token.get_value()}, \"[\" is required"
+		}))
+	}
+	dtp.next()!
+	mut ast_table := Table{
+		table:  {}
+		is_arr: true
+		len:    0
+	}
+
+	for {
+
+		match dtp.cur_token.token_type {
+			token.Punctuation {
+				if dtp.cur_token.get_value() == ']' {
+					dtp.next()!
+					return ast_table
+				}
+			}
+			token.EOL {
+				dtp.next()!
+			}
+			else {}
+		}
+
+
+
+		mut key := '${ast_table.len + 1}'
+
+		if dtp.next_token.token_type is token.Operator {
+			if dtp.next_token.get_value() == '=>' {
+
+				parsed_factor := dtp.parse_factor()!
+				dtp.next()!
+				if parsed_factor is string {
+					key = parsed_factor
+					ast_table.is_arr = false
+				} else {
+					break
+				}
+			} 
+		}
+
+		ast_table.table[key] = dtp.parse_factor()!
+		ast_table.len++
+
+		match dtp.cur_token.token_type {
+			token.Seperator, token.EOL {
+				dtp.next()!
+			}
+
+			token.Punctuation {}
+			else {
+				break
+			}
+		}
+	}
+
+	return error(errors_df.gen_custom_error_message('parsing', 'eval_parse_table', '',
+		0, 0, errors_df.ErrorUnexpectedToken{
+		token: dtp.cur_token.get_value()
+	}))
+}
+
+fn (mut dtp DataTypeParser) parse_factor() !EvalOutput {
+	cur_type := dtp.cur_token
+	token_type := cur_type.token_type
+
+	match token_type {
+		token.String {
+			dtp.next()!
+    		return token_type.value
+			 
+		}
+		token.Identifier {
+			dtp.next()!
+			return token_type.value
+		}
+		token.Numeric {
+			dtp.next()!
+			if token_type.hint == .i64 {
+				return token_type.value.i64()
+			}
+			return token_type.value.f64()
+		}
+		token.Punctuation {
+			if token_type.value == '[' {
+				return dtp.parse_table()
+			}
+			return token_type.value
+		}
+		token.EOF{}
+		token.EOL{}
+		token.Comment{}
+		else {
+			return  cur_type.get_value()
+		}
+	}
+
+	return error(errors_df.gen_custom_error_message('parsing', 'eval_parse_factor', '',
+		0, 0, errors_df.ErrorUnexpectedToken{
+		token: cur_type.get_value()
+	}))
+}
+
+fn small_danfe_table_parser(value string) !EvalOutput {
+	mut dtp := DataTypeParser{
+		lex: lexer.Lex{
+			x:               0
+			file_data:       value
+			file_path:       'tmp/sai/123'
+			return_path:     ''
+			can_import:      true
+			file_len:        value.len
+			cur_col:         1
+			cur_line:        1
+			bracket_balance: []
+		}
+	}
+
+	dtp.next()!
+	dtp.next()!
+
+
+	return dtp.parse_table()
 }
