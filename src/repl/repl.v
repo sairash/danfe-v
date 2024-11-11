@@ -89,7 +89,7 @@ pub fn (mut rp Repl) start() ! {
 			rp.data += input
 
 			for i := last_line_executed; i < pars_current_body.len; i += 1 {
-				pars_current_body[i].eval('') or {
+				pars_current_body[i].eval(['']) or {
 					println('')
 					println(err)
 				}

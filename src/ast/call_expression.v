@@ -7,7 +7,7 @@ import rand
 import lexer
 import token
 
-fn print_reserved_function(process_id string, args []Node, new_line bool) ! {
+fn print_reserved_function(process_id []string, args []Node, new_line bool) ! {
 	for arg in args {
 		eval_output := arg.eval(process_id)!
 
@@ -18,19 +18,19 @@ fn print_reserved_function(process_id string, args []Node, new_line bool) ! {
 	}
 }
 
-fn input_reserved_function(process_id string, arg Node) !EvalOutput {
+fn input_reserved_function(process_id []string, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 
 	print(eval_output.get_as_string())
 	return os.get_line()
 }
 
-fn type_of_value_reserved_function(process_id string, arg Node) !EvalOutput {
+fn type_of_value_reserved_function(process_id []string, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return eval_output.get_token_type()
 }
 
-fn len_reserved_function(process_id string, arg Node) !EvalOutput {
+fn len_reserved_function(process_id []string, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return match eval_output {
 		Table, string {
@@ -42,7 +42,7 @@ fn len_reserved_function(process_id string, arg Node) !EvalOutput {
 	}
 }
 
-fn int_reserved_function(process_id string, arg Node) !EvalOutput {
+fn int_reserved_function(process_id []string, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return match eval_output {
 		i64 {
@@ -64,7 +64,7 @@ fn assert_print(emote string, test_type string, function_name string) {
 	println('${emote} ${test_type}: ${function_name}')
 }
 
-fn assert_reserved_function(process_id string, arg []Node, func_name string) !EvalOutput {
+fn assert_reserved_function(process_id []string, arg []Node, func_name string) !EvalOutput {
 	if arg.len < 2 {
 		return error_gen('eval', 'assert', errors_df.ErrorArgumentsMisMatch{
 			func_name:       func_name
@@ -147,21 +147,21 @@ fn assert_reserved_function(process_id string, arg []Node, func_name string) !Ev
 }
 
 const default_call_operations = {
-	'print':    fn (process_id string, ce CallExpression) !EvalOutput {
+	'print':    fn (process_id []string, ce CallExpression) !EvalOutput {
 		print_reserved_function(process_id, ce.arguments, false)!
 		return i64(0)
 	}
-	'println':  fn (process_id string, ce CallExpression) !EvalOutput {
+	'println':  fn (process_id []string, ce CallExpression) !EvalOutput {
 		print_reserved_function(process_id, ce.arguments, true)!
 		return i64(0)
 	}
-	'assert':   fn (process_id string, ce CallExpression) !EvalOutput {
+	'assert':   fn (process_id []string, ce CallExpression) !EvalOutput {
 		if '-t' in (identifier_value_map['main.__args__'] or { return i64(0) } as Table).table {
 			return assert_reserved_function(process_id, ce.arguments, ce.base.token.value)
 		}
 		return i64(0)
 	}
-	'input':    fn (process_id string, ce CallExpression) !EvalOutput {
+	'input':    fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'input', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -171,7 +171,7 @@ const default_call_operations = {
 		}
 		return input_reserved_function(process_id, ce.arguments[0])
 	}
-	'typeof':   fn (process_id string, ce CallExpression) !EvalOutput {
+	'typeof':   fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -182,7 +182,7 @@ const default_call_operations = {
 
 		return type_of_value_reserved_function(process_id, ce.arguments[0])
 	}
-	'len':      fn (process_id string, ce CallExpression) !EvalOutput {
+	'len':      fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'len', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -192,7 +192,7 @@ const default_call_operations = {
 		}
 		return len_reserved_function(process_id, ce.arguments[0])
 	}
-	'int':      fn (process_id string, ce CallExpression) !EvalOutput {
+	'int':      fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'int', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -202,7 +202,7 @@ const default_call_operations = {
 		}
 		return int_reserved_function(process_id, ce.arguments[0])
 	}
-	'float':    fn (process_id string, ce CallExpression) !EvalOutput {
+	'float':    fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'float', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -226,7 +226,7 @@ const default_call_operations = {
 			}
 		}
 	}
-	'string':   fn (process_id string, ce CallExpression) !EvalOutput {
+	'string':   fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -237,7 +237,7 @@ const default_call_operations = {
 		eval_output := ce.arguments[0].eval(process_id)!
 		return '${eval_output.get_as_string()}'
 	}
-	'panic':    fn (process_id string, ce CallExpression) !EvalOutput {
+	'panic':    fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value
@@ -249,7 +249,7 @@ const default_call_operations = {
 
 		return error_gen('system', 'panic', errors_df.ErrorCustomError{eval_output.get_as_string()})
 	}
-	'rand_str': fn (process_id string, ce CallExpression) !EvalOutput {
+	'rand_str': fn (process_id []string, ce CallExpression) !EvalOutput {
 		mut length := 10
 
 		if ce.arguments.len > 1 {
@@ -278,11 +278,11 @@ const default_call_operations = {
 		}
 		return rand.string(length)
 	}
-	'rand_int': fn (process_id string, ce CallExpression) !EvalOutput {
+	'rand_int': fn (process_id []string, ce CallExpression) !EvalOutput {
 		rand_int := rand.i64()
 		return if rand_int < 0 { rand_int * -1 } else { rand_int }
 	}
-	'table':    fn (process_id string, ce CallExpression) !EvalOutput {
+	'table':    fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len > 1 {
 			return error_gen('eval', 'rand', errors_df.ErrorArgumentsMisMatch{
 				func_name:       ce.base.token.value

@@ -52,7 +52,7 @@ fn interpreter(parent_path string, child_path string, full_module_name string, m
 					cur.module_, args)!
 			}
 			else {
-				cur.eval('')!
+				cur.eval([''])!
 			}
 		}
 	}
