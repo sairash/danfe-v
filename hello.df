@@ -1,3 +1,10 @@
-println(rand_int())
-println(rand_str())
-println(rand_str(20))
+x = 10
+
+function test(hello) {
+    println(x, hello)
+    x = 20
+}
+
+
+test(x)
+println(x)
