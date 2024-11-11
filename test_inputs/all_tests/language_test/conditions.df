@@ -9,7 +9,9 @@ if (a < b) {
     string_value = '%i{a} < %i{b}'
 } else if a > b {
     string_value = '%i{a} > %i{b}'
-} else {
+} 
+
+else {
     string_value = "%i{a} == %i{b}"
 }
 

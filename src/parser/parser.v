@@ -307,7 +307,7 @@ fn (mut p Parse) parse_cond_statement(parse_condition bool, hint ast.Conditions)
 	return cond_clause
 }
 
-fn (mut p Parse) parse_if_statement() !ast.Node {
+fn (mut p Parse) parse_if_statement(skip_space bool) !ast.Node {
 	mut else_used := false
 
 	mut ret_statement := ast.IfStatement{
@@ -347,6 +347,20 @@ fn (mut p Parse) parse_if_statement() !ast.Node {
 						else_used = true
 					}
 				} else {
+					break
+				}
+			}
+			token.EOL {
+				if skip_space {
+					p.eat_with_name_token(token.Token{ token_type: token.EOL{} })!
+				}else {
+					break
+				}
+			}
+			token.Comment {
+				if skip_space {
+					p.eat_with_name_token(token.Token{ token_type: token.Comment{} })!
+				}else {
 					break
 				}
 			}
@@ -459,7 +473,7 @@ fn (mut p Parse) parse_identifier() !ast.Node {
 				ast.Identifier {
 					match parse_asm.token.reserved {
 						'if' {
-							return p.parse_if_statement()
+							return p.parse_if_statement(true)
 						}
 						'loop' {
 							return p.parse_loop_statement()

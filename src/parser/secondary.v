@@ -422,7 +422,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 					}
 				}
 				'if' {
-					return p.parse_if_statement()!
+					return p.parse_if_statement(false)!
 				}
 				'nil' {
 					ret_value = ast.Litreal{
