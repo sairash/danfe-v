@@ -226,6 +226,24 @@ const default_call_operations = {
 			}
 		}
 	}
+	'chr':   fn (process_id []string, ce CallExpression) !EvalOutput {
+		if ce.arguments.len != 1 {
+			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
+				func_name:       ce.base.token.value
+				expected_amount: '1'
+				found_amount:    '${ce.arguments.len}'
+			})
+		}
+		eval_output := ce.arguments[0].eval(process_id)!
+		return match eval_output {
+			i64 {
+				rune(eval_output).str()
+			}
+			else {
+				error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'|int|'})
+			}
+		}
+	}
 	'string':   fn (process_id []string, ce CallExpression) !EvalOutput {
 		if ce.arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
