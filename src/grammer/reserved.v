@@ -29,6 +29,7 @@ pub const reserved_symbols = {
 	'table':      []
 	'float':      []
 	'string':     ['sabda']
+	'chr':        []
 	'rand_str':   []
 	'rand_int':   []
 	// 'not':      ['hoina']
