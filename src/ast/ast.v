@@ -778,7 +778,9 @@ fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) 
 	}
 
 	processes := gen_map_key(i.from, process_id, i.token.value)
-	for process in processes {
+	// println(identifier_value_map)
+	// println(processes)
+	for process in processes.reverse() {
 
 		if '${process}' !in identifier_assignment_tracker {
 			identifier_assignment_tracker['${process}'] = []
@@ -794,7 +796,7 @@ fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) 
 	}
 
 	if processes.len > 0 {
-		identifier_value_map[processes[0]] = output
+		identifier_value_map[processes[processes.len - 1]] = output
 	}
 }
 
@@ -968,8 +970,8 @@ fn (if_statement IfStatement) eval(process_id []string) !EvalOutput {
 pub struct BreakStatement {}
 
 fn (br BreakStatement) eval(process_id []string) !EvalOutput {
-	for process in process_id {
-		program_state_map[process] = ProgramStateStore{
+	if process_id.len > 0 {
+		program_state_map[process_id[process_id.len - 1]] = ProgramStateStore{
 			hint:  ProgramState.break_
 			value: i64(0)
 		}
@@ -984,10 +986,10 @@ pub mut:
 }
 
 fn (rt ReturnStatement) eval(process_id []string) !EvalOutput {
-	for process in process_id {
-		program_state_map[process] = ProgramStateStore{
+	if process_id.len > 0 {
+		program_state_map[process_id[process_id.len - 1]] = ProgramStateStore{
 			hint:  ProgramState.return_
-			value: i64(0)
+			value: rt.value.eval(process_id)!
 		}
 		return i64(1)
 	}
@@ -997,13 +999,14 @@ fn (rt ReturnStatement) eval(process_id []string) !EvalOutput {
 pub struct ContinueStatement {}
 
 fn (br ContinueStatement) eval(process_id []string) !EvalOutput {
-	for process in process_id {
-		program_state_map[process] = ProgramStateStore{
+	if process_id.len > 0 {
+		program_state_map[process_id[process_id.len - 1]] = ProgramStateStore{
 			hint:  ProgramState.continue_
 			value: i64(0)
 		}
 		return i64(1)
 	}
+	
 	return i64(0)
 
 }
@@ -1015,13 +1018,18 @@ pub mut:
 }
 
 fn (for_st ForStatement) eval(process_id []string) !EvalOutput {
-	new_process_id := process_id[process_id.len - 1]
+	new_process_id := gen_process_id(process_id[process_id.len - 1])
+	mut all_processes := process_id.clone()
+	all_processes << new_process_id
+	defer {
+		delete_process_memory(new_process_id)
+	}
 
 	for {
-		if is_condition_met(process_id, for_st.condition)! {
+		if is_condition_met(all_processes, for_st.condition)! {
 			for st in for_st.body {
 				if new_process_id !in program_state_map {
-					st.eval(process_id)!
+					st.eval(all_processes)!
 				} else {
 					break
 				}
@@ -1087,20 +1095,20 @@ pub mut:
 }
 
 fn (ce CallExpression) eval(process_id []string) !EvalOutput {
-	new_process_id := gen_process_id(process_id[process_id.len - 1])
+	new_process_id := gen_process_id('')
 	mut all_processes := process_id.clone()
 	all_processes << new_process_id
-	all_processes = gen_map_key(ce.base.from, all_processes, ce.base.token.value)
+	map_all_processes := gen_map_key(ce.base.from, all_processes, ce.base.token.value)
 	defer {
 		delete_process_memory(new_process_id)
 	}
 
 	match ce.base.token.reserved {
 		'' {
-			for process in all_processes {
+			for process in map_all_processes {
 				if process in function_value_map {
 					unsafe {
-						return function_value_map[process].execute(ce, process_id)
+						return function_value_map[process].execute(ce, all_processes)
 					}
 				}
 			}
@@ -1111,7 +1119,7 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 		}
 		else {
 			if ce.base.token.reserved in default_call_operations {
-				return default_call_operations[ce.base.token.reserved](process_id,
+				return default_call_operations[ce.base.token.reserved](all_processes,
 					ce)
 			}
 
