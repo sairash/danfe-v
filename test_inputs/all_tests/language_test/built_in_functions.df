@@ -2,11 +2,14 @@ a = 10
 b = float(a)
 c = string(a)
 d = int(c)
+e = chr(65)
+
 
 assert("start", "built_in_function")
 assert("print", "built_in_int_to_float", typeof(b), 'float')
 assert("print", "built_in_int_to_string", typeof(c), 'string')
-assert("print", "built_in_int_to_int", typeof(d), 'int')
+assert("print", "built_in_string_to_int", typeof(d), 'int')
+assert("print", "built_in_int_to_char", typeof(e), 'string')
 
 random_int = rand_int()
 random_str = rand_str(10)
