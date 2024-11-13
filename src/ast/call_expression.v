@@ -239,6 +239,12 @@ const default_call_operations = {
 			i64 {
 				rune(eval_output).str()
 			}
+			string {
+				if eval_output.len > 1{
+					error_gen('eval', 'call_exp', errors_df.ErrorCustomError{"The string length should be > 0 and < 2"})
+				}
+				i64(eval_output[0])
+			}
 			else {
 				error_gen('eval', 'call_exp', errors_df.ErrorCantFindExpectedToken{'|int|'})
 			}
