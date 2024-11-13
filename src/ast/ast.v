@@ -285,10 +285,10 @@ fn (evl EvalOutput) is_true() bool {
 			evl != ''
 		}
 		i64 {
-			evl == i64(1)
+			evl != i64(0)
 		}
 		f64 {
-			evl == f64(1.0)
+			evl != f64(0.0)
 		}
 		Table {
 			evl.len != 0
