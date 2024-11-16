@@ -15,6 +15,7 @@ pub mut:
 	ast        ast.Chunk
 	module_    string @[required]
 	cur_file   string
+	scope      string @[required]
 }
 
 fn (mut p Parse) next() !bool {
@@ -353,14 +354,14 @@ fn (mut p Parse) parse_if_statement(skip_space bool) !ast.Node {
 			token.EOL {
 				if skip_space {
 					p.eat_with_name_token(token.Token{ token_type: token.EOL{} })!
-				}else {
+				} else {
 					break
 				}
 			}
 			token.Comment {
 				if skip_space {
 					p.eat_with_name_token(token.Token{ token_type: token.Comment{} })!
-				}else {
+				} else {
 					break
 				}
 			}
@@ -629,6 +630,7 @@ pub fn Parse.new(path string, module_name string) !&Parse {
 		ast:       ast.Chunk{}
 		module_:   module_name
 		cur_file:  path
+		scope:     ''
 	}
 }
 
@@ -661,5 +663,6 @@ pub fn Parse.new_temp(go_through_file_data string) !&Parse {
 		}
 		module_:  ''
 		cur_file: '/tmp/sai'
+		scope:    ''
 	}
 }
