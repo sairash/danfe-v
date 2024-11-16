@@ -2,18 +2,6 @@ y = "Sairash"
 red = '\e[31m'
 bold = '\e[1m'
 
-function outer(name, color){
-    color = '\e[32m' # green color
-    println("Hello ", color, bold, name, "\e[0m, From Outer Function!")
-
-    y = "Gautam"
-    function inner(name, color, bold){
-        println("Hello ", color, bold, y, "\e[0m, From Inner Function! \n")
-    }
-
-    inner(y, red, ' Sairash ')
-}
-
 
 function test_for_loop() {
     x = 0
@@ -29,3 +17,15 @@ if __module__ == "main"{
     test_for_loop()
 }
 
+
+function outer(name, color){
+    color = '\e[32m' # green color
+    println("Hello ", color, bold, name, "\e[0m, From Outer Function!")
+
+    y = "Gautam"
+    function inner(name, color, bold){
+        println("Hello ", color, bold, y, "\e[0m, From Inner Function! \n")
+    }
+
+    inner(y, red, ' Sairash ')
+}
