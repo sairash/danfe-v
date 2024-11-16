@@ -340,7 +340,7 @@ pub fn (evl EvalOutput) get_as_string() string {
 	return output_str
 }
 
-fn gen_process_id(process_id string) string {
+pub fn gen_process_id(process_id string) string {
 	return if process_id != '' { process_id } else { rand.ascii(14) }
 }
 
@@ -434,6 +434,7 @@ struct ProgramStateStore {
 struct FunctionStore {
 	parameters []Identifier
 	body       []Node
+	scope      string
 }
 
 fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutput {
@@ -450,7 +451,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutpu
 
 	for val in fs.body {
 		val.eval(process_id)!
-		
+
 		for process in process_id {
 			if process in program_state_map {
 				program_store := program_state_map[process]
@@ -464,7 +465,6 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutpu
 				break
 			}
 		}
-		
 	}
 
 	return i64(1)
@@ -767,12 +767,11 @@ fn (i Identifier) eval(process_id []string) !EvalOutput {
 			}
 		}
 	}
-	
+
 	return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 }
 
 fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) {
-	
 	if '${i.from}' !in identifier_assignment_tracker {
 		identifier_assignment_tracker['${i.from}'] = []
 	}
@@ -781,7 +780,6 @@ fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) 
 	// println(identifier_value_map)
 	// println(processes)
 	for process in processes.reverse() {
-
 		if '${process}' !in identifier_assignment_tracker {
 			identifier_assignment_tracker['${process}'] = []
 		}
@@ -792,7 +790,6 @@ fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) 
 			identifier_value_map[process] = output
 			return
 		}
-
 	}
 
 	if processes.len > 0 {
@@ -1006,9 +1003,8 @@ fn (br ContinueStatement) eval(process_id []string) !EvalOutput {
 		}
 		return i64(1)
 	}
-	
-	return i64(0)
 
+	return i64(0)
 }
 
 pub struct ForStatement {
@@ -1062,9 +1058,11 @@ pub mut:
 	name       Identifier
 	parameters []Identifier
 	body       []Node
+	scope      string @[required]
+	prev_scope string @[required]
 }
 
-fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
+pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
 	if fd.name.token.reserved != '' {
 		return error_gen('eval', 'function_declaration', errors_df.ErrorTryingToUseReservedIdentifier{
 			identifier: fd.name.token.value
@@ -1077,14 +1075,23 @@ fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
 		})
 	}
 
-	processes := gen_map_key(fd.name.from, process_id, fd.name.token.value)
-	
+	mut new_processes := process_id.clone()
+	new_processes << fd.prev_scope
+
+	processes := gen_map_key(fd.name.from, new_processes, fd.name.token.value)
 
 	function_value_map[processes[processes.len - 1]] = FunctionStore{
 		parameters: fd.parameters
 		body:       fd.body
+		scope:      fd.scope
 	}
 
+	return i64(1)
+}
+
+pub struct FunctionDeclared {}
+
+fn (fdd FunctionDeclared) eval(process_id []string) !EvalOutput {
 	return i64(1)
 }
 
@@ -1108,6 +1115,7 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 			for process in map_all_processes {
 				if process in function_value_map {
 					unsafe {
+						all_processes << function_value_map[process].scope
 						return function_value_map[process].execute(ce, all_processes)
 					}
 				}
@@ -1137,5 +1145,3 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 }
 
 // type Stat = Node
-
-
