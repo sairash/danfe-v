@@ -34,6 +34,8 @@ fn (mut p Parse) parse_function() !ast.Node {
 			from:  p.module_
 		}
 		parameters: []
+		scope: ast.gen_process_id('')
+		prev_scope: p.scope
 	}
 
 	p.eat(token.Token{
@@ -42,6 +44,8 @@ fn (mut p Parse) parse_function() !ast.Node {
 			value: '('
 		}
 	})!
+
+	p.scope = ret_func.scope
 
 	for {
 		match p.cur_token.token_type {
@@ -131,7 +135,11 @@ fn (mut p Parse) parse_function() !ast.Node {
 		}
 	})!
 
-	return ret_func
+	p.scope = ret_func.prev_scope
+	
+	ret_func.eval([p.module_ if p.scope != ''{ ".${p.scope}"} else {""}])!
+
+	return ast.FunctionDeclared{}
 }
 
 pub fn resolve_absolute_path(base_path string, relative_path_old string) string {
