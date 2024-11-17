@@ -124,6 +124,12 @@ fn (err ErrorUnexpectedToken) output() string {
 	return 'There was an unexpected token: ${err.token}'
 }
 
+pub struct ErrorTryingToCallNonFunctionIdentifier {}
+
+fn (err ErrorTryingToCallNonFunctionIdentifier) output() string {
+	return 'Trying to call a non function Identifer as a function.'
+}
+
 pub struct ErrorCantUseTokenOfTypeForOperaiton {
 pub mut:
 	first_token_type  string
