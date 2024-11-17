@@ -11,8 +11,6 @@ __global identifier_assignment_tracker = map[string][]string{}
 
 __global identifier_value_map = map[string]EvalOutput{}
 
-__global function_value_map = map[string]FunctionStore{}
-
 __global program_state_map = map[string]ProgramStateStore{}
 
 struct Table {
@@ -22,7 +20,7 @@ mut:
 	is_arr bool
 }
 
-type EvalOutput = string | i64 | f64 | Table
+type EvalOutput = string | i64 | f64 | Table | FunctionStore
 
 pub fn add_args_to_table(full_module_ string, args []string) {
 	if '${full_module_}.__args__' in identifier_value_map {
@@ -91,6 +89,9 @@ pub fn (evl EvalOutput) get_token_type() string {
 				return 'array'
 			}
 			'table'
+		}
+		FunctionStore {
+			'function'
 		}
 	}
 }
@@ -276,6 +277,9 @@ pub fn (evl EvalOutput) is_empty() bool {
 		Table {
 			return evl.len == 0
 		}
+		FunctionStore {
+			return false
+		}
 	}
 }
 
@@ -292,6 +296,9 @@ fn (evl EvalOutput) is_true() bool {
 		}
 		Table {
 			evl.len != 0
+		}
+		FunctionStore {
+			return false
 		}
 	}
 }
@@ -334,6 +341,9 @@ pub fn (evl EvalOutput) get_as_string() string {
 			ops = ops[..ops.len - 2]
 			ops += ']'
 			return ops
+		}
+		FunctionStore {
+			return 'function'
 		}
 	}
 
@@ -1069,18 +1079,18 @@ pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
 		})
 	}
 
-	if '${fd.name.from}.${fd.name}' in function_value_map {
-		return error_gen('eval', 'function_declaration', errors_df.ErrorFunctionAlreadyDeclared{
-			function_name: '${fd.name.token.value}'
-		})
-	}
-
 	mut new_processes := process_id.clone()
 	new_processes << fd.prev_scope
 
 	processes := gen_map_key(fd.name.from, new_processes, fd.name.token.value)
 
-	function_value_map[processes[processes.len - 1]] = FunctionStore{
+	if processes[processes.len - 1] in identifier_value_map {
+		return error_gen('eval', 'function_declaration', errors_df.ErrorFunctionAlreadyDeclared{
+			function_name: '${fd.name.token.value}'
+		})
+	}
+
+	identifier_value_map[processes[processes.len - 1]] = FunctionStore{
 		parameters: fd.parameters
 		body:       fd.body
 		scope:      fd.scope
@@ -1113,10 +1123,18 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 	match ce.base.token.reserved {
 		'' {
 			for process in map_all_processes {
-				if process in function_value_map {
+				if process in identifier_value_map {
 					unsafe {
-						all_processes << function_value_map[process].scope
-						return function_value_map[process].execute(ce, all_processes)
+						func := identifier_value_map[process]
+						match func {
+							FunctionStore {
+								all_processes << func.scope
+								return func.execute(ce, all_processes)
+							}
+							else {
+								return error_gen('eval', 'call_exp', errors_df.ErrorTryingToCallNonFunctionIdentifier{})
+							}
+						}
 					}
 				}
 			}
