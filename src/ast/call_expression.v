@@ -147,70 +147,70 @@ fn assert_reserved_function(process_id []string, arg []Node, func_name string) !
 }
 
 const default_call_operations = {
-	'print':    fn (process_id []string, ce CallExpression) !EvalOutput {
-		print_reserved_function(process_id, ce.arguments, false)!
+	'print':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		print_reserved_function(process_id, arguments, false)!
 		return i64(0)
 	}
-	'println':  fn (process_id []string, ce CallExpression) !EvalOutput {
-		print_reserved_function(process_id, ce.arguments, true)!
+	'println':  fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		print_reserved_function(process_id, arguments, true)!
 		return i64(0)
 	}
-	'assert':   fn (process_id []string, ce CallExpression) !EvalOutput {
+	'assert':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		if '-t' in (identifier_value_map['main.__args__'] or { return i64(0) } as Table).table {
-			return assert_reserved_function(process_id, ce.arguments, ce.base.token.value)
+			return assert_reserved_function(process_id, arguments, base.token.value)
 		}
 		return i64(0)
 	}
-	'input':    fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'input':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'input', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		return input_reserved_function(process_id, ce.arguments[0])
+		return input_reserved_function(process_id, arguments[0])
 	}
-	'typeof':   fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'typeof':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
 
-		return type_of_value_reserved_function(process_id, ce.arguments[0])
+		return type_of_value_reserved_function(process_id, arguments[0])
 	}
-	'len':      fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'len':      fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'len', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		return len_reserved_function(process_id, ce.arguments[0])
+		return len_reserved_function(process_id, arguments[0])
 	}
-	'int':      fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'int':      fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'int', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		return int_reserved_function(process_id, ce.arguments[0])
+		return int_reserved_function(process_id, arguments[0])
 	}
-	'float':    fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'float':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'float', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		eval_output := ce.arguments[0].eval(process_id)!
+		eval_output := arguments[0].eval(process_id)!
 		return match eval_output {
 			i64 {
 				f64(eval_output)
@@ -226,15 +226,15 @@ const default_call_operations = {
 			}
 		}
 	}
-	'chr':   fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'chr':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		eval_output := ce.arguments[0].eval(process_id)!
+		eval_output := arguments[0].eval(process_id)!
 		return match eval_output {
 			i64 {
 				rune(eval_output).str()
@@ -250,40 +250,40 @@ const default_call_operations = {
 			}
 		}
 	}
-	'string':   fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'string':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		eval_output := ce.arguments[0].eval(process_id)!
+		eval_output := arguments[0].eval(process_id)!
 		return '${eval_output.get_as_string()}'
 	}
-	'panic':    fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len != 1 {
+	'panic':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		eval_output := ce.arguments[0].eval(process_id)!
+		eval_output := arguments[0].eval(process_id)!
 
 		return error_gen('system', 'panic', errors_df.ErrorCustomError{eval_output.get_as_string()})
 	}
-	'rand_str': fn (process_id []string, ce CallExpression) !EvalOutput {
+	'rand_str': fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		mut length := 10
 
-		if ce.arguments.len > 1 {
+		if arguments.len > 1 {
 			return error_gen('eval', 'rand', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
-		} else if ce.arguments.len == 1 {
-			eval_length := ce.arguments[0].eval(process_id)!
+		} else if arguments.len == 1 {
+			eval_length := arguments[0].eval(process_id)!
 			match eval_length {
 				i64 {
 					if eval_length >= max_int || eval_length <= min_int {
@@ -302,19 +302,19 @@ const default_call_operations = {
 		}
 		return rand.string(length)
 	}
-	'rand_int': fn (process_id []string, ce CallExpression) !EvalOutput {
+	'rand_int': fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		rand_int := rand.i64()
 		return if rand_int < 0 { rand_int * -1 } else { rand_int }
 	}
-	'table':    fn (process_id []string, ce CallExpression) !EvalOutput {
-		if ce.arguments.len > 1 {
+	'table':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		if arguments.len > 1 {
 			return error_gen('eval', 'rand', errors_df.ErrorArgumentsMisMatch{
-				func_name:       ce.base.token.value
+				func_name:       base.token.value
 				expected_amount: '1'
-				found_amount:    '${ce.arguments.len}'
+				found_amount:    '${arguments.len}'
 			})
 		}
-		eval_output := ce.arguments[0].eval(process_id)!
+		eval_output := arguments[0].eval(process_id)!
 		return match eval_output {
 			string {
 				small_danfe_table_parser(eval_output)!

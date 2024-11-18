@@ -150,7 +150,18 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 	})
 }
 
-pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, value EvalOutput, name_of_var string, process_id []string, insert_op string) !EvalOutput {
+pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, node Node, name_of_var string, process_id []string, insert_op string) !EvalOutput {
+	mut value := EvalOutput(i64(1))
+
+	match node {
+		FunctionStore {
+			value = EvalOutput(node)
+		}
+		else {
+			value = node.eval(process_id)!
+		}
+	}
+
 	mut evaluation := evl
 	mut name := name_of_var
 
@@ -343,7 +354,17 @@ pub fn (evl EvalOutput) get_as_string() string {
 			return ops
 		}
 		FunctionStore {
-			return 'function'
+			if evl.parameters.len == 0 {
+				return 'function () {}'
+			}
+
+			mut ret_string := 'function ( '
+			for parm in evl.parameters {
+				ret_string += '${parm.token.value}, '
+			}
+			ret_string = ret_string[..ret_string.len - 2]
+			ret_string += ') { FunctionBlock }'
+			return ret_string
 		}
 	}
 
@@ -441,22 +462,27 @@ struct ProgramStateStore {
 	value EvalOutput
 }
 
-struct FunctionStore {
+pub struct FunctionStore {
+pub mut:
 	parameters []Identifier
 	body       []Node
 	scope      string
 }
 
+fn (fs FunctionStore) eval(process_id []string) !EvalOutput {
+	return i64(1)
+}
+
 fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutput {
 	if fs.parameters.len != ce.arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
-			expected: '${fs.parameters.len} parameters for function ${ce.base.from}.${ce.base.token.value}(${fs.parameters.map(it.token.value).join(', ')})'
+			expected: '${fs.parameters.len} parameters for function ${(ce.base as Identifier).from}.${(ce.base as Identifier).token.value}(${fs.parameters.map(it.token.value).join(', ')})'
 			found:    '${ce.arguments.len} parameters were passed'
 		})
 	}
 
 	for i := 0; i < fs.parameters.len; i++ {
-		fs.parameters[i].set_value(process_id, ce.arguments[i].eval(process_id)!, true)
+		fs.parameters[i].set_value(process_id, ce.arguments[i], true)!
 	}
 
 	for val in fs.body {
@@ -781,7 +807,7 @@ fn (i Identifier) eval(process_id []string) !EvalOutput {
 	return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 }
 
-fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) {
+fn (i Identifier) set_value(process_id []string, node Node, force bool) ! {
 	if '${i.from}' !in identifier_assignment_tracker {
 		identifier_assignment_tracker['${i.from}'] = []
 	}
@@ -789,6 +815,18 @@ fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) 
 	processes := gen_map_key(i.from, process_id, i.token.value)
 	// println(identifier_value_map)
 	// println(processes)
+
+	mut value := EvalOutput(i64(1))
+
+	match node {
+		FunctionStore {
+			value = EvalOutput(node)
+		}
+		else {
+			value = node.eval(process_id)!
+		}
+	}
+
 	for process in processes.reverse() {
 		if '${process}' !in identifier_assignment_tracker {
 			identifier_assignment_tracker['${process}'] = []
@@ -797,13 +835,13 @@ fn (i Identifier) set_value(process_id []string, output EvalOutput, force bool) 
 		if process in identifier_value_map || force {
 			identifier_assignment_tracker['${process_id}'] << '${process}'
 
-			identifier_value_map[process] = output
+			identifier_value_map[process] = value
 			return
 		}
 	}
 
 	if processes.len > 0 {
-		identifier_value_map[processes[processes.len - 1]] = output
+		identifier_value_map[processes[processes.len - 1]] = value
 	}
 }
 
@@ -841,7 +879,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 								value: '-1'
 								from:  var_.from
 							}),
-						], asss.init.eval(process_id)!, var_.from, process_id, asss.hint)
+						], asss.init, var_.from, process_id, asss.hint)
 					}
 					return error_gen('eval', 'push', errors_df.ErrorUnexpectedToken{
 						token: asss.hint
@@ -854,7 +892,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 				}
 			}
 
-			var_.set_value(process_id, asss.init.eval(process_id)!, false)
+			var_.set_value(process_id, asss.init, false)!
 			return i64(1)
 		}
 		IndexExpression {
@@ -867,8 +905,8 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 				}
 			}
 			mut eval_output := var_.base.eval(process_id)!
-			return eval_output.update_indexed_value(var_.indexes, asss.init.eval(process_id)!,
-				var_.base.from, process_id, asss.hint)
+			return eval_output.update_indexed_value(var_.indexes, asss.init, var_.base.from,
+				process_id, asss.hint)
 		}
 		else {}
 	}
@@ -1107,7 +1145,7 @@ fn (fdd FunctionDeclared) eval(process_id []string) !EvalOutput {
 
 pub struct CallExpression {
 pub mut:
-	base      Identifier
+	base      Node // Identifier and Indexed Expression
 	arguments []Node
 }
 
@@ -1115,45 +1153,67 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 	new_process_id := gen_process_id('')
 	mut all_processes := process_id.clone()
 	all_processes << new_process_id
-	map_all_processes := gen_map_key(ce.base.from, all_processes, ce.base.token.value)
+
 	defer {
 		delete_process_memory(new_process_id)
 	}
 
-	match ce.base.token.reserved {
-		'' {
-			for process in map_all_processes {
-				if process in identifier_value_map {
-					unsafe {
-						func := identifier_value_map[process]
-						match func {
-							FunctionStore {
-								all_processes << func.scope
-								return func.execute(ce, all_processes)
-							}
-							else {
-								return error_gen('eval', 'call_exp', errors_df.ErrorTryingToCallNonFunctionIdentifier{})
+	base := ce.base
+	match base {
+		IndexExpression {
+			function_from_value := base.eval(process_id)!
+			match function_from_value {
+				FunctionStore {
+					return function_from_value.execute(ce, all_processes)
+				}
+				else {
+					return error_gen('eval', 'call_exp', errors_df.ErrorTryingToCallNonFunctionIdentifier{})
+				}
+			}
+		}
+		Identifier {
+			map_all_processes := gen_map_key(base.from, all_processes, base.token.value)
+
+			match base.token.reserved {
+				'' {
+					for process in map_all_processes {
+						if process in identifier_value_map {
+							unsafe {
+								func := identifier_value_map[process]
+								match func {
+									FunctionStore {
+										all_processes << func.scope
+										return func.execute(ce, all_processes)
+									}
+									else {
+										return error_gen('eval', 'call_exp', errors_df.ErrorTryingToCallNonFunctionIdentifier{})
+									}
+								}
 							}
 						}
 					}
+
+					return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
+						token: base.token.value
+					})
+				}
+				else {
+					if base.token.reserved in default_call_operations {
+						return default_call_operations[base.token.reserved](all_processes,
+							base, ce.arguments)
+					}
+
+					return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
+						token: base.token.value
+					})
 				}
 			}
-
-			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
-				token: ce.base.token.value
-			})
 		}
 		else {
-			if ce.base.token.reserved in default_call_operations {
-				return default_call_operations[ce.base.token.reserved](all_processes,
-					ce)
-			}
-
-			return error_gen('eval', 'call_exp', errors_df.ErrorUndefinedToken{
-				token: ce.base.token.value
-			})
+			return error_gen('eval', 'call_exp', errors_df.ErrorTryingToCallNonFunctionIdentifier{})
 		}
 	}
+
 	// for args in ce.arguments {
 	// 	args.eval()!
 	// }
