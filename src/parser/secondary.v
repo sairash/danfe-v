@@ -29,7 +29,6 @@ fn (mut p Parse) parse_function_inner() !([]ast.Identifier, []ast.Node) {
 		}
 	})!
 
-
 	for {
 		match p.cur_token.token_type {
 			token.Punctuation {
@@ -129,7 +128,6 @@ fn (mut p Parse) parse_function() !ast.Node {
 	p.eat_with_name_token(token.Token{
 		token_type: token.Identifier{}
 	})!
-	
 
 	mut ret_func := ast.FunctionDeclaration{
 		name:       ast.Identifier{
@@ -137,18 +135,16 @@ fn (mut p Parse) parse_function() !ast.Node {
 			from:  p.module_
 		}
 		parameters: []
-		scope: ast.gen_process_id('')
+		scope:      ast.gen_process_id('')
 		prev_scope: p.scope
 	}
 	p.scope = ret_func.scope
 
-	
 	ret_func.parameters, ret_func.body = p.parse_function_inner()!
 
 	p.scope = ret_func.prev_scope
 
-	
-	ret_func.eval([p.module_ if p.scope != ''{ ".${p.scope}"} else {""}])!
+	ret_func.eval([p.module_, if p.scope != '' { '.${p.scope}' } else { '' }])!
 
 	return ast.FunctionDeclared{}
 }
@@ -226,7 +222,7 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 
 	if !p.check_token_with_name(token.Token{
 		token_type: token.String{}
-	})  {
+	}) {
 		return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
 			p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
 			token: '"file" after import for eg. (import "./file_name.df") or (import "file_name") or (import "file_name" as my_file)'
@@ -236,7 +232,7 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 	mut import_statement := ast.ImportStatement{
 		from_path:    p.cur_file
 		from_module_: p.module_
-		path:         resolve_absolute_path(p.cur_file, ( p.parse_factor()! as ast.Litreal).value)
+		path:         resolve_absolute_path(p.cur_file, (p.parse_factor()! as ast.Litreal).value)
 	}
 
 	if import_statement.from_path == import_statement.path {
@@ -249,8 +245,8 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 	} else {
 		p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
 		if !p.check_token_with_name(token.Token{
-		token_type: token.Identifier{}
-	}) {
+			token_type: token.Identifier{}
+		}) {
 			return error(errors_df.gen_custom_error_message('parsing', 'import', p.lex.file_path,
 				p.lex.cur_line, p.lex.cur_col, errors_df.ErrorCantFindExpectedToken{
 				token: '"file_aliases" after as for eg. (import "./file_name.df" as my_file)'
@@ -259,10 +255,10 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 		mut as_value := p.parse_factor()!
 
 		match mut as_value {
-			ast.Identifier{
+			ast.Identifier {
 				as_value = ast.Litreal{
-					hint: .str
-					from: as_value.from
+					hint:  .str
+					from:  as_value.from
 					value: as_value.token.value
 				}
 			}
@@ -276,7 +272,7 @@ fn (mut p Parse) parse_import_statement() !ast.Node {
 
 fn (mut p Parse) parse_index_expression() !ast.Node {
 	mut index_exp := ast.IndexExpression{
-		base:   ast.Identifier{
+		base:    ast.Identifier{
 			token: p.cur_token.token_type as token.Identifier
 			from:  p.module_
 		}
@@ -312,6 +308,21 @@ fn (mut p Parse) parse_index_expression() !ast.Node {
 				value: ']'
 			}
 		})!
+	}
+
+	if p.check_token(token.Token{
+		token_type: token.Punctuation{
+			open:  true
+			value: '('
+		}
+	})
+	{
+		mut call_expression := ast.CallExpression{
+			base: index_exp
+		}
+
+		call_expression.arguments = p.parse_call_arguments()!
+		return call_expression
 	}
 
 	return index_exp
@@ -401,7 +412,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 			return ast.Litreal{
 				hint:  ast.LitrealType.str
 				value: x.value
-				from: p.module_
+				from:  p.module_
 			}
 		}
 		token.Identifier {
@@ -434,10 +445,10 @@ fn (mut p Parse) parse_factor() !ast.Node {
 
 			match x.reserved {
 				'true', 'false' {
-					ret_value =  ast.Litreal{
+					ret_value = ast.Litreal{
 						hint:  ast.LitrealType.boolean
 						value: x.reserved
-						from: p.module_
+						from:  p.module_
 					}
 				}
 				'if' {
@@ -447,7 +458,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 					ret_value = ast.Litreal{
 						hint:  ast.LitrealType.null
 						value: x.reserved
-						from: p.module_
+						from:  p.module_
 					}
 				}
 				else {}
@@ -463,7 +474,7 @@ fn (mut p Parse) parse_factor() !ast.Node {
 			return ret_value
 		}
 		token.VBlock {
-			p.eat_with_name_token(token.Token{token_type: token.VBlock{}})!
+			p.eat_with_name_token(token.Token{ token_type: token.VBlock{} })!
 			return ast.VBlock{
 				v_code: p.prev_token.get_value()
 				from:   p.module_
@@ -484,30 +495,21 @@ fn (mut p Parse) parse_factor() !ast.Node {
 			return ast.Litreal{
 				hint:  lit_type
 				value: x.value
-				from: p.module_
+				from:  p.module_
 			}
 		}
-		token.Operator{
+		token.Operator {
 			if p.check_token(token.Token{
-				token_type: token.Operator{
-					"!"
-				}
+				token_type: token.Operator{'!'}
 			}) || p.check_token(token.Token{
-				token_type: token.Operator{
-					"-"
-				}
+				token_type: token.Operator{'-'}
 			}) {
 				op_ := p.cur_token.get_value()
 				p.eat(token.Token{
-					token_type: token.Operator{
-						op_
-					}
+					token_type: token.Operator{op_}
 				})!
 
-				return ast.UnaryExpression {
-					op_
-					p.parse_expression()!
-				}
+				return ast.UnaryExpression{op_, p.parse_expression()!}
 			}
 		}
 		token.Punctuation {

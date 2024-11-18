@@ -165,19 +165,8 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 	}))
 }
 
-fn (mut p Parse) parse_call_expression() !ast.Node {
-	mut call_expression := ast.CallExpression{
-		base:      ast.Identifier{
-			token: p.cur_token.token_type as token.Identifier
-			from:  p.module_
-		}
-		arguments: []
-	}
-
-	p.eat_with_name_token(token.Token{
-		token_type: token.Identifier{}
-	})!
-
+fn (mut p Parse) parse_call_arguments() ![]ast.Node {
+	mut arguments := []ast.Node{}
 	p.eat(token.Token{
 		token_type: token.Punctuation{
 			open:  true
@@ -220,7 +209,7 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 			else {}
 		}
 
-		call_expression.arguments << p.parse_expression()!
+		arguments << p.parse_expression()!
 
 		p.eat(token.Token{
 			token_type: token.Seperator{
@@ -244,6 +233,22 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 		}
 	}
 
+	return arguments
+}
+
+fn (mut p Parse) parse_call_expression() !ast.Node {
+	mut call_expression := ast.CallExpression{
+		base:      ast.Identifier{
+			token: p.cur_token.token_type as token.Identifier
+			from:  p.module_
+		}
+	}
+
+	p.eat_with_name_token(token.Token{
+		token_type: token.Identifier{}
+	})!
+
+	call_expression.arguments = p.parse_call_arguments()!
 	return call_expression
 }
 
@@ -456,25 +461,25 @@ fn (mut p Parse) parse_assignment() !ast.Node {
 			}
 		})!
 
+
 		if p.check_current_identifier_reserved('function') {
 			p.eat_with_name_token(token.Token{
 				token_type: token.Identifier{}
 			})!
 
-			if mut var_ is ast.Identifier {
-				mut ret_func := ast.FunctionDeclaration{
-					name:       var_
-					parameters: []
-					scope:      ast.gen_process_id('')
-					prev_scope: p.scope
-				}
-				p.scope = ret_func.scope
+			previous_scope := p.scope
+			p.scope = ast.gen_process_id('')
+			mut assignment_func_store := ast.FunctionStore{
+				scope: p.scope
+			}
+			assignment_func_store.parameters, assignment_func_store.body = p.parse_function_inner()!
 
-				ret_func.parameters, ret_func.body = p.parse_function_inner()!
+			p.scope = previous_scope
 
-				p.scope = ret_func.prev_scope
-
-				return ret_func
+			return ast.AssignmentStatement{
+				hint:     operator_value
+				variable: var_
+				init:     assignment_func_store
 			}
 		}
 
