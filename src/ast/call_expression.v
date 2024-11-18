@@ -6,6 +6,15 @@ import strconv
 import rand
 import lexer
 import token
+import vweb
+
+// __global all_p_server = []string{}
+// __global call_exp_server = []string{}
+
+
+struct App {
+	vweb.Context
+}
 
 fn print_reserved_function(process_id []string, args []Node, new_line bool) ! {
 	for arg in args {
@@ -226,7 +235,7 @@ const default_call_operations = {
 			}
 		}
 	}
-	'chr':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'chr':      fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -240,8 +249,8 @@ const default_call_operations = {
 				rune(eval_output).str()
 			}
 			string {
-				if eval_output.len > 1{
-					error_gen('eval', 'call_exp', errors_df.ErrorCustomError{"The string length should be > 0 and < 2"})
+				if eval_output.len > 1 {
+					error_gen('eval', 'call_exp', errors_df.ErrorCustomError{'The string length should be > 0 and < 2'})
 				}
 				i64(eval_output[0])
 			}
@@ -324,6 +333,91 @@ const default_call_operations = {
 			}
 		}
 	}
+	'server':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+		port := arguments[0].eval(process_id)!
+		if port is i64 {
+			server_functions := arguments[1].eval(process_id)!
+			// call_exp_server = CallExpression{
+			// 	base
+			// 	arguments
+			// }
+			// all_p_server = process_id
+			server_url_function_map = server_functions
+			vweb.run(&App{}, 8080)
+		}
+
+		return i64(0)
+	}
+}
+
+@['/:...']
+fn (mut app App) wildcard(path string) vweb.Result {
+	mut query_builder := Table{
+		table:  {}
+		is_arr: false
+	}
+
+	for key, query in app.Context.query {
+		query_builder.table[key] = query
+	}
+
+	query_builder.len = query_builder.table.len
+
+	mut form_builder := Table{
+		table:  {}
+		is_arr: false
+	}
+
+	for key, form in app.Context.form {
+		form_builder.table[key] = form
+	}
+
+	form_builder.len = form_builder.table.len
+
+	mut files_builder := Table{
+		table:  {}
+		is_arr: false
+	}
+
+	for key, files in app.Context.files {
+		mut files_table := Table{
+			table:  {}
+			is_arr: true
+		}
+		for key_file, file in files {
+			files_table.table['${key_file}'] = Table{
+				table:  {
+					'filename':     file.filename
+					'content_type': file.content_type
+					'data':         file.data
+				}
+				len:    3
+				is_arr: false
+			}
+		}
+		files_table.len = files_table.table.len
+		files_builder.table[key] = files_table
+	}
+
+	request_table_builder := Table{
+		table: {
+			'host':           app.Context.req.host
+			'url':            app.Context.req.url
+			'data':           app.Context.req.data
+			'method':         app.Context.req.method.str()
+			'verbos':         if app.Context.req.verbose { i64(1) } else { i64(0) }
+			'page_gen_start': app.Context.page_gen_start
+			'query':          query_builder
+			'form':           form_builder
+			'files':          files_builder
+		}
+	}
+
+	println(server_url_function_map)
+	println(request_table_builder)
+
+	// println(app.Context.req)
+	return app.text('URL path = "${path}"')
 }
 
 struct DataTypeParser {
@@ -353,7 +447,6 @@ fn (mut dtp DataTypeParser) parse_table() !EvalOutput {
 	}
 
 	for {
-
 		match dtp.cur_token.token_type {
 			token.Punctuation {
 				if dtp.cur_token.get_value() == ']' {
@@ -367,13 +460,10 @@ fn (mut dtp DataTypeParser) parse_table() !EvalOutput {
 			else {}
 		}
 
-
-
 		mut key := '${ast_table.len + 1}'
 
 		if dtp.next_token.token_type is token.Operator {
 			if dtp.next_token.get_value() == '=>' {
-
 				parsed_factor := dtp.parse_factor()!
 				dtp.next()!
 				if parsed_factor is string {
@@ -382,7 +472,7 @@ fn (mut dtp DataTypeParser) parse_table() !EvalOutput {
 				} else {
 					break
 				}
-			} 
+			}
 		}
 
 		ast_table.table[key] = dtp.parse_factor()!
@@ -392,7 +482,6 @@ fn (mut dtp DataTypeParser) parse_table() !EvalOutput {
 			token.Seperator, token.EOL {
 				dtp.next()!
 			}
-
 			token.Punctuation {}
 			else {
 				break
@@ -413,8 +502,7 @@ fn (mut dtp DataTypeParser) parse_factor() !EvalOutput {
 	match token_type {
 		token.String {
 			dtp.next()!
-    		return token_type.value
-			 
+			return token_type.value
 		}
 		token.Identifier {
 			dtp.next()!
@@ -433,11 +521,11 @@ fn (mut dtp DataTypeParser) parse_factor() !EvalOutput {
 			}
 			return token_type.value
 		}
-		token.EOF{}
-		token.EOL{}
-		token.Comment{}
+		token.EOF {}
+		token.EOL {}
+		token.Comment {}
 		else {
-			return  cur_type.get_value()
+			return cur_type.get_value()
 		}
 	}
 
@@ -464,7 +552,6 @@ fn small_danfe_table_parser(value string) !EvalOutput {
 
 	dtp.next()!
 	dtp.next()!
-
 
 	return dtp.parse_table()
 }

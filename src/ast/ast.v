@@ -13,6 +13,9 @@ __global identifier_value_map = map[string]EvalOutput{}
 
 __global program_state_map = map[string]ProgramStateStore{}
 
+__global server_url_function_map = EvalOutput{}
+
+
 struct Table {
 mut:
 	table  map[string]EvalOutput
