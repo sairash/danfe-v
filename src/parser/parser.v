@@ -456,6 +456,28 @@ fn (mut p Parse) parse_assignment() !ast.Node {
 			}
 		})!
 
+		if p.check_current_identifier_reserved('function') {
+			p.eat_with_name_token(token.Token{
+				token_type: token.Identifier{}
+			})!
+
+			if mut var_ is ast.Identifier {
+				mut ret_func := ast.FunctionDeclaration{
+					name:       var_
+					parameters: []
+					scope:      ast.gen_process_id('')
+					prev_scope: p.scope
+				}
+				p.scope = ret_func.scope
+
+				ret_func.parameters, ret_func.body = p.parse_function_inner()!
+
+				p.scope = ret_func.prev_scope
+
+				return ret_func
+			}
+		}
+
 		return ast.AssignmentStatement{
 			hint:     operator_value
 			variable: var_

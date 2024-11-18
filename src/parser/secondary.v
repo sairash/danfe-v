@@ -19,25 +19,9 @@ pub fn format_path(input_str string) string {
 	return result
 }
 
-fn (mut p Parse) parse_function() !ast.Node {
-	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
-
-	var_name := p.cur_token.token_type
-
-	p.eat_with_name_token(token.Token{
-		token_type: token.Identifier{}
-	})!
-
-	mut ret_func := ast.FunctionDeclaration{
-		name:       ast.Identifier{
-			token: var_name as token.Identifier
-			from:  p.module_
-		}
-		parameters: []
-		scope: ast.gen_process_id('')
-		prev_scope: p.scope
-	}
-
+fn (mut p Parse) parse_function_inner() !([]ast.Identifier, []ast.Node) {
+	mut params := []ast.Identifier{}
+	mut body := []ast.Node{}
 	p.eat(token.Token{
 		token_type: token.Punctuation{
 			open:  true
@@ -45,7 +29,6 @@ fn (mut p Parse) parse_function() !ast.Node {
 		}
 	})!
 
-	p.scope = ret_func.scope
 
 	for {
 		match p.cur_token.token_type {
@@ -85,7 +68,7 @@ fn (mut p Parse) parse_function() !ast.Node {
 		parsed_factor := p.parse_factor()!
 		match parsed_factor {
 			ast.Identifier {
-				ret_func.parameters << parsed_factor
+				params << parsed_factor
 			}
 			else {
 				return error(errors_df.gen_custom_error_message('parsing', 'function_declaration',
@@ -126,7 +109,7 @@ fn (mut p Parse) parse_function() !ast.Node {
 		}
 	})!
 
-	ret_func.body << p.walk()!
+	body << p.walk()!
 
 	p.eat(token.Token{
 		token_type: token.Punctuation{
@@ -135,7 +118,35 @@ fn (mut p Parse) parse_function() !ast.Node {
 		}
 	})!
 
+	return params, body
+}
+
+fn (mut p Parse) parse_function() !ast.Node {
+	p.eat_with_name_token(token.Token{ token_type: token.Identifier{} })!
+
+	var_name := p.cur_token.token_type
+
+	p.eat_with_name_token(token.Token{
+		token_type: token.Identifier{}
+	})!
+	
+
+	mut ret_func := ast.FunctionDeclaration{
+		name:       ast.Identifier{
+			token: var_name as token.Identifier
+			from:  p.module_
+		}
+		parameters: []
+		scope: ast.gen_process_id('')
+		prev_scope: p.scope
+	}
+	p.scope = ret_func.scope
+
+	
+	ret_func.parameters, ret_func.body = p.parse_function_inner()!
+
 	p.scope = ret_func.prev_scope
+
 	
 	ret_func.eval([p.module_ if p.scope != ''{ ".${p.scope}"} else {""}])!
 
