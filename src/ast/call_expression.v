@@ -394,7 +394,7 @@ fn (mut app App) wildcard(path string) vweb.Result {
 	}
 
 	request_table_builder := Table{
-		table: {
+		table:  {
 			'host':           app.Context.req.host
 			'url':            app.Context.req.url
 			'data':           app.Context.req.data
@@ -406,15 +406,13 @@ fn (mut app App) wildcard(path string) vweb.Result {
 			'files':          files_builder
 		}
 		is_arr: false
-		len: 9
+		len:    9
 	}
 
-	((server_url_function_map as Table).table['/'] or { panic('Not Found') } as FunctionStore).execute_with_eval_output_as_arguments([
-		request_table_builder,
-	], all_p_server) or { panic(err) }
-
 	// println(app.Context.req)
-	return app.text('URL path = "${path}"')
+	return app.text(((server_url_function_map as Table).table['/'] or { panic('Not Found') } as FunctionStore).execute_with_eval_output_as_arguments([
+		request_table_builder,
+	], all_p_server) or { panic(err) }.get_as_string())
 }
 
 struct DataTypeParser {
