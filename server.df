@@ -3,7 +3,7 @@ port = 8080
 server_functions = []
 
 server_functions["/"] = function (server_data) {
-    println(server_data)
+    return server_data
 }
 
 server(port, server_functions)
