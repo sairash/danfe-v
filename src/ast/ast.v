@@ -476,6 +476,39 @@ fn (fs FunctionStore) eval(process_id []string) !EvalOutput {
 	return i64(1)
 }
 
+fn (fs FunctionStore) execute_with_eval_output_as_arguments( arguments []EvalOutput, process_id []string) !EvalOutput {
+	if fs.parameters.len != arguments.len {
+		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
+			expected: '${fs.parameters.len} parameters'
+			found:    '${arguments.len} parameters were passed'
+		})
+	}
+
+	for i := 0; i < fs.parameters.len; i++ {
+		fs.parameters[i].set_value(process_id, FunctionDeclared{}, true, arguments[i], true)!
+	}
+
+	for val in fs.body {
+		val.eval(process_id)!
+
+		for process in process_id {
+			if process in program_state_map {
+				program_store := program_state_map[process]
+				match program_store.hint {
+					.return_ {
+						program_state_map.delete(process)
+						return program_store.value
+					}
+					else {}
+				}
+				break
+			}
+		}
+	}
+
+	return i64(0)
+}  
+
 fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutput {
 	if fs.parameters.len != ce.arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
@@ -485,7 +518,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutpu
 	}
 
 	for i := 0; i < fs.parameters.len; i++ {
-		fs.parameters[i].set_value(process_id, ce.arguments[i], true)!
+		fs.parameters[i].set_value(process_id, ce.arguments[i], true, "", false)!
 	}
 
 	for val in fs.body {
@@ -810,7 +843,7 @@ fn (i Identifier) eval(process_id []string) !EvalOutput {
 	return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 }
 
-fn (i Identifier) set_value(process_id []string, node Node, force bool) ! {
+fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_output EvalOutput, use_eval bool) ! {
 	if '${i.from}' !in identifier_assignment_tracker {
 		identifier_assignment_tracker['${i.from}'] = []
 	}
@@ -819,17 +852,21 @@ fn (i Identifier) set_value(process_id []string, node Node, force bool) ! {
 	// println(identifier_value_map)
 	// println(processes)
 
-	mut value := EvalOutput(i64(1))
+	mut value := eval_output
 
-	match node {
-		FunctionStore {
-			value = EvalOutput(node)
+	if !use_eval {
+		match node {
+			FunctionStore {
+				value = EvalOutput(node)
+			}
+			else {
+				value = node.eval(process_id)!
+			}
 		}
-		else {
-			value = node.eval(process_id)!
-		}
+
 	}
 
+	
 	for process in processes.reverse() {
 		if '${process}' !in identifier_assignment_tracker {
 			identifier_assignment_tracker['${process}'] = []
@@ -895,7 +932,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 				}
 			}
 
-			var_.set_value(process_id, asss.init, false)!
+			var_.set_value(process_id, asss.init, false, "", false)!
 			return i64(1)
 		}
 		IndexExpression {

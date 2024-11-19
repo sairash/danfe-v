@@ -8,9 +8,7 @@ import lexer
 import token
 import vweb
 
-// __global all_p_server = []string{}
-// __global call_exp_server = []string{}
-
+__global all_p_server = []string{}
 
 struct App {
 	vweb.Context
@@ -337,13 +335,9 @@ const default_call_operations = {
 		port := arguments[0].eval(process_id)!
 		if port is i64 {
 			server_functions := arguments[1].eval(process_id)!
-			// call_exp_server = CallExpression{
-			// 	base
-			// 	arguments
-			// }
-			// all_p_server = process_id
+			all_p_server = process_id.clone()
 			server_url_function_map = server_functions
-			vweb.run(&App{}, 8080)
+			vweb.run(&App{}, int(port))
 		}
 
 		return i64(0)
@@ -411,10 +405,13 @@ fn (mut app App) wildcard(path string) vweb.Result {
 			'form':           form_builder
 			'files':          files_builder
 		}
+		is_arr: false
+		len: 9
 	}
 
-	println(server_url_function_map)
-	println(request_table_builder)
+	((server_url_function_map as Table).table['/'] or { panic('Not Found') } as FunctionStore).execute_with_eval_output_as_arguments([
+		request_table_builder,
+	], all_p_server) or { panic(err) }
 
 	// println(app.Context.req)
 	return app.text('URL path = "${path}"')
