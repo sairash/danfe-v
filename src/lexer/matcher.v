@@ -165,22 +165,22 @@ fn (l Lex) check_if_in_reserved_symbol(identifier string) string {
 	return ''
 }
 
-fn (mut l Lex) match_reserved_symbols(identifier string) !token.Token {
+fn (mut l Lex) match_reserved_symbols(identifier string, identifier_split []string) !token.Token {
 	mut ret_ident := token.Identifier{
-		value:    identifier
-		reserved: l.check_if_in_reserved_symbol(identifier)
+		value:     identifier
+		sep_value: identifier_split
+		reserved:  l.check_if_in_reserved_symbol(identifier)
 	}
 
 	if ret_ident.reserved != 'import' && ret_ident.reserved != 'as' {
 		if !l.skip_next_can_import {
 			l.can_import = false
-		}else{
+		} else {
 			l.skip_next_can_import = false
 		}
-	}else {
+	} else {
 		l.skip_next_can_import = true
 	}
-
 
 	if ret_ident.reserved == 'v' {
 		l.skip_whitespace() or {
@@ -294,18 +294,24 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 }
 
 fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
-	mut return_str := first_char.ascii_str()
+	mut return_str := ''
+
+	mut return_str_sep := first_char.ascii_str()
 
 	mut check_string_has_reserved := false
+
+	mut modules_sep := []string{}
+
 	for {
 		peek := l.peek() or { break }
-
 		if peek.is_letter() || peek.is_digit() || peek == `_` {
-			return_str += peek.ascii_str()
+			return_str_sep += peek.ascii_str()
 			l.consume_char()
 		} else if peek == `.` {
 			check_string_has_reserved = true
-			return_str += peek.ascii_str()
+			return_str += return_str_sep + peek.ascii_str()
+			modules_sep << return_str_sep
+			return_str_sep = ''
 			l.consume_char()
 		} else {
 			unsafe {
@@ -315,7 +321,7 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 		}
 	}
 
-	modules_sep := return_str.split(".")
+	return_str += return_str_sep
 
 	if check_string_has_reserved {
 		for key, value in grammer.reserved_symbols {
@@ -347,7 +353,7 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 		})
 	}
 
-	mut new_token := l.match_reserved_symbols(return_str)!
+	mut new_token := l.match_reserved_symbols(return_str, modules_sep)!
 	new_token.range = [start_index, l.get_x()]
 	defer {
 		unsafe {

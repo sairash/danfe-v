@@ -54,6 +54,7 @@ pub struct Identifier {
 pub mut:
 	value string
 	reserved string // true if it is a keyword that danfe uses
+	sep_value []string
 }
 
 // Actions for eg: + - *
