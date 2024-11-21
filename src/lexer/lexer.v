@@ -96,6 +96,14 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 		`a`...`z`, `A`...`Z`, `_` {
 			return l.match_identifier(next_char, l.get_x())
 		}
+		`.` {
+			return token.Token{
+				token_type: token.Operator{
+					value: '.'
+				}
+				range:      [l.get_x()]
+			}
+		}
 		`'`, `"` {
 			return l.match_string(next_char, l.get_x())
 		}
