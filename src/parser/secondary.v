@@ -464,11 +464,8 @@ fn (mut p Parse) parse_factor() !ast.Node {
 				else {}
 			}
 
-			p.eat(token.Token{
-				token_type: token.Identifier{
-					value:    x.value
-					reserved: x.reserved
-				}
+			p.eat_with_name_token(token.Token{
+				token_type: token.Identifier{}
 			})!
 
 			return ret_value
