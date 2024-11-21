@@ -3,7 +3,7 @@
     <a href="/" target="_blank"><img width="80" src="./assets/df_rounded_more.png" alt="V logo"></a>
 </p>
 <h1>Danfe Programming Language</h1>
-<h3>Dynamic Assembler for Native Function Engine</h3>
+<h3>Not "Danphe"</h3>
 
 [Danfe](https://danfe.sairashgautam.com.np)
 | [Doc](https://danfe.sairashgautam.com.np/about)
@@ -25,4 +25,4 @@ Danfe is a now **turing complete** programming language that I am hacking up in 
 
 ## Concept
 
-It is a **Dynamic Assembler Engine** which is just fancy term to say it modular language compiler. Danfe is written in such a way that it is going to be easier to hackup a compiler for other languages in short period of time. Danfe can compile into a human readable code of other languages (for eg: **asm**, **golang**, **js**, **vlang**, **c**, **python**).
+A Toy project where I learn and make this language better.
