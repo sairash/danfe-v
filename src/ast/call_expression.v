@@ -156,17 +156,17 @@ fn assert_reserved_function(process_id []string, arg []Node, func_name string) !
 const default_call_operations = {
 	'print':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		print_reserved_function(process_id, arguments, false)!
-		return i64(0)
+		return i64(1)
 	}
 	'println':  fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		print_reserved_function(process_id, arguments, true)!
-		return i64(0)
+		return i64(1)
 	}
 	'assert':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		if '-t' in (identifier_value_map['main.__args__'] or { return i64(0) } as Table).table {
 			return assert_reserved_function(process_id, arguments, base.token.value)
 		}
-		return i64(0)
+		return i64(1)
 	}
 	'input':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
