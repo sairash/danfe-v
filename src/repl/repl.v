@@ -53,8 +53,8 @@ const df_graphics = [
 pub fn (mut rp Repl) start() ! {
 	println('')
 	mut irpl := 0
-	for irpl < 6 {
-		println('${df_graphics[cli_df.supports_sixel][irpl]}${df_graphics[2][irpl]}')
+	for irpl <= 6 {
+		println('${df_graphics[0][irpl]}${df_graphics[2][irpl]}')
 		irpl++
 	}
 
