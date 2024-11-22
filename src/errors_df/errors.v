@@ -325,6 +325,15 @@ fn (err ErrorUnexpectedWhile) output() string {
 	return 'Unexpected Error In the compiler while ${err.while_doing}. Raise an Issue in Github'
 }
 
+pub struct ErrorTryingToSetOnUndefined {
+pub mut:
+	token string
+}
+
+fn (err ErrorTryingToSetOnUndefined) output() string {
+	return 'Trying to set "${err.token}"" value on undefined'
+}
+
 pub struct ErrorUndefinedToken {
 pub mut:
 	token string
