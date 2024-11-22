@@ -144,7 +144,12 @@ fn (mut p Parse) parse_function() !ast.Node {
 
 	p.scope = ret_func.prev_scope
 
-	ret_func.eval([p.module_, if p.scope != '' { '.${p.scope}' } else { '' }])!
+	mut processes := p.module_.clone()
+	if p.scope != '' {
+		processes << p.scope
+	}
+
+	ret_func.eval(processes)!
 
 	return ast.FunctionDeclared{}
 }
