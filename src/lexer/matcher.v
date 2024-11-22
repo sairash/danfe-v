@@ -322,6 +322,7 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 	}
 
 	return_str += return_str_sep
+	modules_sep << return_str_sep
 
 	if check_string_has_reserved {
 		for key, value in grammer.reserved_symbols {
