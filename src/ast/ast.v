@@ -15,7 +15,6 @@ __global program_state_map = map[string]ProgramStateStore{}
 
 __global server_url_function_map = EvalOutput{}
 
-
 struct Table {
 mut:
 	table  map[string]EvalOutput
@@ -378,22 +377,27 @@ pub fn gen_process_id(process_id string) string {
 	return if process_id != '' { process_id } else { rand.ascii(14) }
 }
 
-fn gen_map_key(from string, process_id []string, value string) []string {
+fn gen_map_key(from []string, process_id []string, sep_value []string) []string {
 	mut ret_processes := []string{}
 	for _, process in process_id {
-		ret_processes << '${from}${if process != '' {
+		mut join_val := '${from.join('.')}${if process != '' {
 			'.' + process
 		} else {
 			''
-		}}.${value}'
+		}}'
+		for value in sep_value {
+			join_val += '.${value}'
+			ret_processes << join_val
+		}
 	}
 	return ret_processes
 }
 
-fn match_identifier_with_reserved(identifier string, from string) Identifier {
+fn match_identifier_with_reserved(identifier string, from []string) Identifier {
 	mut ret_ident := token.Identifier{
-		value:    identifier
-		reserved: ''
+		value:     identifier
+		sep_value: identifier.split('.')
+		reserved:  ''
 	}
 
 	for key, value in grammer.reserved_symbols {
@@ -412,7 +416,7 @@ fn remove_space(string_value string) string {
 	return string_value.replace(' ', '').replace('\n', '').replace('\t', '')
 }
 
-fn replace_identifier_in_string(string_value string, from string, process_id []string) !string {
+fn replace_identifier_in_string(string_value string, from []string, process_id []string) !string {
 	mut ret_string := ''
 	mut start_index := 0
 	mut cur_index := 0
@@ -476,7 +480,7 @@ fn (fs FunctionStore) eval(process_id []string) !EvalOutput {
 	return i64(1)
 }
 
-fn (fs FunctionStore) execute_with_eval_output_as_arguments( arguments []EvalOutput, process_id []string) !EvalOutput {
+fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutput, process_id []string) !EvalOutput {
 	if fs.parameters.len != arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
 			expected: '${fs.parameters.len} parameters'
@@ -485,7 +489,8 @@ fn (fs FunctionStore) execute_with_eval_output_as_arguments( arguments []EvalOut
 	}
 
 	for i := 0; i < fs.parameters.len; i++ {
-		fs.parameters[i].set_value(process_id, FunctionDeclared{}, true, arguments[i], true)!
+		fs.parameters[i].set_value(process_id, FunctionDeclared{}, true, arguments[i],
+			true)!
 	}
 
 	for val in fs.body {
@@ -507,7 +512,7 @@ fn (fs FunctionStore) execute_with_eval_output_as_arguments( arguments []EvalOut
 	}
 
 	return i64(0)
-}  
+}
 
 fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutput {
 	if fs.parameters.len != ce.arguments.len {
@@ -518,7 +523,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutpu
 	}
 
 	for i := 0; i < fs.parameters.len; i++ {
-		fs.parameters[i].set_value(process_id, ce.arguments[i], true, "", false)!
+		fs.parameters[i].set_value(process_id, ce.arguments[i], true, '', false)!
 	}
 
 	for val in fs.body {
@@ -597,7 +602,7 @@ pub struct Litreal {
 pub mut:
 	hint  LitrealType
 	value string
-	from  string @[required]
+	from  []string @[required]
 }
 
 fn (li Litreal) eval(process_id []string) !EvalOutput {
@@ -776,7 +781,7 @@ pub mut:
 }
 
 fn (ds DelStatement) eval(process_id []string) !EvalOutput {
-	processes := gen_map_key(ds.variable.from, process_id, ds.variable.token.value)
+	processes := gen_map_key(ds.variable.from, process_id, ds.variable.token.sep_value)
 
 	if processes.len > 0 {
 		identifier_value_map.delete(processes[0])
@@ -788,7 +793,7 @@ fn (ds DelStatement) eval(process_id []string) !EvalOutput {
 pub struct VBlock {
 pub mut:
 	v_code string
-	from   string
+	from   []string
 }
 
 fn (vb VBlock) eval(process_id []string) !EvalOutput {
@@ -817,21 +822,21 @@ pub mut:
 	path         string
 	module_      string
 	from_path    string // path of parent
-	from_module_ string
+	from_module_ []string
 }
 
 fn (im ImportStatement) eval(process_id []string) !EvalOutput {
-	return '${im.from_module_}.${im.module_}'
+	return '${im.from_module_.join(".")}.${im.module_}'
 }
 
 pub struct Identifier {
 pub mut:
 	token token.Identifier
-	from  string
+	from  []string
 }
 
 fn (i Identifier) eval(process_id []string) !EvalOutput {
-	processes := gen_map_key(i.from, process_id, i.token.value)
+	processes := gen_map_key(i.from, process_id, i.token.sep_value)
 	for process in processes {
 		if process in identifier_value_map {
 			unsafe {
@@ -843,14 +848,18 @@ fn (i Identifier) eval(process_id []string) !EvalOutput {
 	return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 }
 
-fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_output EvalOutput, use_eval bool) ! {
-	if '${i.from}' !in identifier_assignment_tracker {
-		identifier_assignment_tracker['${i.from}'] = []
+fn (i Identifier) assign(process_id []string, process string, value EvalOutput) {
+	if process_id.len > 0 && process_id[process_id.len - 1] != '' {
+		identifier_assignment_tracker[process_id[process_id.len - 1]] << process
 	}
+	identifier_value_map[process] = value
+	return
+}
 
-	processes := gen_map_key(i.from, process_id, i.token.value)
-	// println(identifier_value_map)
-	// println(processes)
+fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_output EvalOutput, use_eval bool) ! {
+	i_from_joined := i.from.join('.')
+
+	processes := gen_map_key(i.from, process_id, i.token.sep_value)
 
 	mut value := eval_output
 
@@ -863,25 +872,33 @@ fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_out
 				value = node.eval(process_id)!
 			}
 		}
-
 	}
 
-	
+	mut undefined_counter := 0
+
 	for process in processes.reverse() {
-		if '${process}' !in identifier_assignment_tracker {
-			identifier_assignment_tracker['${process}'] = []
-		}
-
-		if process in identifier_value_map || force {
-			identifier_assignment_tracker['${process_id}'] << '${process}'
-
+		if process in identifier_value_map {
 			identifier_value_map[process] = value
 			return
+		} else {
+			undefined_counter++
+		}
+
+		if force {
+			i.assign(process_id, process, value)
+			return
+		} else {
+			println(processes[0])
+			if undefined_counter > 1 && '${process}.__module__' !in identifier_value_map && processes[0] !in identifier_value_map {
+				return error_gen('eval', 'identifier', errors_df.ErrorTryingToSetOnUndefined{
+					token: '${i.token.value} in ${i_from_joined}'
+				})
+			}
 		}
 	}
 
 	if processes.len > 0 {
-		identifier_value_map[processes[processes.len - 1]] = value
+		i.assign(process_id, processes[processes.len - 1], value)
 	}
 }
 
@@ -901,7 +918,6 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 					identifier: var_.token.value
 				})
 			}
-
 			match asss.hint {
 				'=' {}
 				'?=' {
@@ -919,7 +935,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 								value: '-1'
 								from:  var_.from
 							}),
-						], asss.init, var_.from, process_id, asss.hint)
+						], asss.init, var_.from.join('.'), process_id, asss.hint)
 					}
 					return error_gen('eval', 'push', errors_df.ErrorUnexpectedToken{
 						token: asss.hint
@@ -932,7 +948,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 				}
 			}
 
-			var_.set_value(process_id, asss.init, false, "", false)!
+			var_.set_value(process_id, asss.init, false, '', false)!
 			return i64(1)
 		}
 		IndexExpression {
@@ -945,7 +961,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 				}
 			}
 			mut eval_output := var_.base.eval(process_id)!
-			return eval_output.update_indexed_value(var_.indexes, asss.init, var_.base.from,
+			return eval_output.update_indexed_value(var_.indexes, asss.init, var_.base.from.join('.'),
 				process_id, asss.hint)
 		}
 		else {}
@@ -1105,6 +1121,8 @@ fn (for_st ForStatement) eval(process_id []string) !EvalOutput {
 	new_process_id := gen_process_id(process_id[process_id.len - 1])
 	mut all_processes := process_id.clone()
 	all_processes << new_process_id
+
+	identifier_assignment_tracker[new_process_id] = []
 	defer {
 		delete_process_memory(new_process_id)
 	}
@@ -1160,7 +1178,7 @@ pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
 	mut new_processes := process_id.clone()
 	new_processes << fd.prev_scope
 
-	processes := gen_map_key(fd.name.from, new_processes, fd.name.token.value)
+	processes := gen_map_key(fd.name.from, new_processes, fd.name.token.sep_value)
 
 	if processes[processes.len - 1] in identifier_value_map {
 		return error_gen('eval', 'function_declaration', errors_df.ErrorFunctionAlreadyDeclared{
@@ -1194,6 +1212,7 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 	mut all_processes := process_id.clone()
 	all_processes << new_process_id
 
+	identifier_assignment_tracker[new_process_id] = []
 	defer {
 		delete_process_memory(new_process_id)
 	}
@@ -1212,7 +1231,7 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 			}
 		}
 		Identifier {
-			map_all_processes := gen_map_key(base.from, all_processes, base.token.value)
+			map_all_processes := gen_map_key(base.from, all_processes, base.token.sep_value)
 
 			match base.token.reserved {
 				'' {
