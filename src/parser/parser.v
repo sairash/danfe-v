@@ -13,7 +13,7 @@ pub mut:
 	cur_token  token.Token
 	nxt_token  token.Token
 	ast        ast.Chunk
-	module_    string @[required]
+	module_    []string @[required]
 	cur_file   string
 	scope      string @[required]
 }
@@ -644,7 +644,7 @@ pub fn (Parse &Parse) error_generator(extra_info string, error_data errors_df.Er
 }
 
 // Create New Parser
-pub fn Parse.new(path string, module_name string) !&Parse {
+pub fn Parse.new(path string, module_name []string) !&Parse {
 	mut lex := lexer.Lex.new(path, '')!
 
 	curr := lex.next()!
@@ -688,7 +688,7 @@ pub fn Parse.new_temp(go_through_file_data string) !&Parse {
 			cur_line:        1
 			bracket_balance: []
 		}
-		module_:  ''
+		module_:  ['']
 		cur_file: '/tmp/sai'
 		scope:    ''
 	}
