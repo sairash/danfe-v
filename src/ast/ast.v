@@ -15,6 +15,8 @@ __global program_state_map = map[string]ProgramStateStore{}
 
 __global server_url_function_map = EvalOutput{}
 
+__global base_dir_path = os.dir(os.executable())
+
 struct Table {
 mut:
 	table  map[string]EvalOutput
@@ -864,22 +866,21 @@ fn (i Identifier) assign(process_id []string, process string, value EvalOutput) 
 }
 
 fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_output EvalOutput, use_eval bool) ! {
-	i_from_joined := i.from.join('.')
-
 	processes := gen_map_key(i.from, process_id, i.token.sep_value)
 
 	if !force {
 		mut didnt_find_in_any := true
 		for cur_process := 0; cur_process <= processes.len - 1; cur_process++ {
-			if processes[cur_process] in identifier_value_map || '${processes[cur_process]}.__module__' in identifier_value_map {
+			if processes[cur_process] in identifier_value_map
+				|| '${processes[cur_process]}.__module__' in identifier_value_map {
 				didnt_find_in_any = false
 				break
 			}
 		}
 
 		if didnt_find_in_any {
-			return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{
-				token: '${i.token.value} in ${i_from_joined}'
+			return error_gen('eval', 'identifier', errors_df.ErrorTryingToSetOnUndefined{
+				token: i.token.value
 			})
 		}
 	}
@@ -1215,6 +1216,7 @@ fn (fdd FunctionDeclared) eval(process_id []string) !EvalOutput {
 
 pub struct CallExpression {
 pub mut:
+	call_path string @[required]
 	base      Node // Identifier and Indexed Expression
 	arguments []Node
 }
@@ -1247,6 +1249,15 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 
 			match base.token.reserved {
 				'' {
+					if base.token.value in std_functions {
+						unsafe {
+							x := std_functions[base.token.value]
+
+							if ce.call_path == "${base_dir_path}${x.path}" {
+								return x.func(all_processes, ce.arguments)
+							}
+						}
+					}
 					for process in map_all_processes {
 						if process in identifier_value_map {
 							unsafe {
