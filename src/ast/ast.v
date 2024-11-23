@@ -379,16 +379,23 @@ pub fn gen_process_id(process_id string) string {
 
 fn gen_map_key(from []string, process_id []string, sep_value []string) []string {
 	mut ret_processes := []string{}
+	from_joined := from.join('.')
+	value_joined := sep_value[..sep_value.len - 1].join('.')
+	last_value := sep_value[sep_value.len - 1]
+
 	for _, process in process_id {
-		mut join_val := '${from.join('.')}${if process != '' {
+		mut join_val := '${from_joined}${if process != '' {
 			'.' + process
 		} else {
 			''
+		}}${if value_joined != '' {
+			'.' + value_joined
+		} else {
+			''
 		}}'
-		for value in sep_value {
-			join_val += '.${value}'
-			ret_processes << join_val
-		}
+		ret_processes << join_val
+		join_val += '.${last_value}'
+		ret_processes << join_val
 	}
 	return ret_processes
 }
@@ -826,7 +833,7 @@ pub mut:
 }
 
 fn (im ImportStatement) eval(process_id []string) !EvalOutput {
-	return '${im.from_module_.join(".")}.${im.module_}'
+	return '${im.from_module_.join('.')}.${im.module_}'
 }
 
 pub struct Identifier {
@@ -861,6 +868,22 @@ fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_out
 
 	processes := gen_map_key(i.from, process_id, i.token.sep_value)
 
+	if !force {
+		mut didnt_find_in_any := true
+		for cur_process := 0; cur_process <= processes.len - 1; cur_process++ {
+			if processes[cur_process] in identifier_value_map || '${processes[cur_process]}.__module__' in identifier_value_map {
+				didnt_find_in_any = false
+				break
+			}
+		}
+
+		if didnt_find_in_any {
+			return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{
+				token: '${i.token.value} in ${i_from_joined}'
+			})
+		}
+	}
+
 	mut value := eval_output
 
 	if !use_eval {
@@ -874,26 +897,15 @@ fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_out
 		}
 	}
 
-	mut undefined_counter := 0
-
 	for process in processes.reverse() {
 		if process in identifier_value_map {
 			identifier_value_map[process] = value
 			return
-		} else {
-			undefined_counter++
 		}
 
 		if force {
 			i.assign(process_id, process, value)
 			return
-		} else {
-			println(processes[0])
-			if undefined_counter > 1 && '${process}.__module__' !in identifier_value_map && processes[0] !in identifier_value_map {
-				return error_gen('eval', 'identifier', errors_df.ErrorTryingToSetOnUndefined{
-					token: '${i.token.value} in ${i_from_joined}'
-				})
-			}
 		}
 	}
 
