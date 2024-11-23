@@ -1,0 +1,26 @@
+
+# Read the contains of file
+function read(path) {
+    if typeof(path) != "string" {
+        panic("Path Must be of type string!")
+    }
+    return os_read_file_2661209820506494319(path)
+}
+
+# Write to path
+function write(path, value) {
+    if typeof(path) != "string" {
+        panic("Path Must be of type string!")
+    }
+    return os_write_file_8609329803011309513(path, value)
+}
+
+
+# list dir
+function ls(path) {
+    if typeof(path) != "string" {
+        panic("Path Must be of type string!")
+    }
+
+    return os_ls_file_8433091393709237347(path)
+}
