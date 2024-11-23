@@ -18,6 +18,9 @@ pub mut:
 	scope      string @[required]
 }
 
+
+
+
 fn (mut p Parse) next() !bool {
 	p.prev_token = p.cur_token
 	p.cur_token = p.nxt_token
@@ -242,6 +245,7 @@ fn (mut p Parse) parse_call_expression() !ast.Node {
 			token: p.cur_token.token_type as token.Identifier
 			from:  p.module_
 		}
+		call_path: p.cur_file
 	}
 
 	p.eat_with_name_token(token.Token{

@@ -12,7 +12,11 @@ pub fn format_path(input_str string) string {
 		result += '.df'
 	}
 
-	if !result.contains('/') {
+	if result.starts_with('@/') {
+		result = result.replace_once('@/', "${base_dir_path}/packages/")
+	}
+
+	if !result.starts_with('/') && !result.starts_with('./') {
 		result = './' + result
 	}
 
@@ -323,7 +327,8 @@ fn (mut p Parse) parse_index_expression() !ast.Node {
 	})
 	{
 		mut call_expression := ast.CallExpression{
-			base: index_exp
+			base:      index_exp
+			call_path: p.cur_file
 		}
 
 		call_expression.arguments = p.parse_call_arguments()!
