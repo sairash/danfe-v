@@ -24,3 +24,41 @@ function ls(path) {
 
     return os_ls_file_8433091393709237347(path)
 }
+
+# moves files or dir
+function move(old_path, new_path) {
+    if typeof(old_path) != "string" && typeof(new_path) != "string" {
+        panic("Paths Must be of type string!")
+    }
+    return os_move_1459546098699018584(old_path, new_path)
+}
+
+
+# makes dir recursively
+function mkdir(path) {
+    if typeof(path) != "string"{
+        panic("Paths Must be of type string!")
+    }
+    return os_mkdir_325329633659613679(path)
+}
+
+
+# 0 if file and 1 if directory
+function isdir(path) {
+    if typeof(path) != "string"{
+        panic("Paths Must be of type string!")
+    }
+    return os_isdir_3352910224302066040(path)
+}
+
+# 1 if file and 0 if directory
+function isfile(path) {
+    if typeof(path) != "string"{
+        panic("Paths Must be of type string!")
+    }
+    return os_isfile_2816429377265257685(path)
+}
+
+# left to make
+# isexe, rm, rmdir, inputpassword, setenv, temp_dir, unsetenv, user_os, user_names, getenv, 
+# file_name, file_size, exists, execute_opt, chdir, chmod, chown, abs_path, home_dir, getwd, glob, hostname
