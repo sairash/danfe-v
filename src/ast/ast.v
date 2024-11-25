@@ -722,8 +722,32 @@ pub mut:
 }
 
 fn (ie IndexExpression) eval(process_id []string) !EvalOutput {
-	mut output_val := ie.base.eval(process_id)!
+	mut output_val := EvalOutput(i64(0))
 	mut name_of_var := ie.base.token.value
+	if ie.base.token.reserved == 'self' {
+		process_value := program_state_map[process_id[process_id.len - 1]] or {
+			return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+				identifier: ie.base.token.value
+			})
+		}
+
+		match process_value.hint {
+			.@none {
+				output_val = identifier_value_map[process_value.value as string] or {
+					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+						identifier: ie.base.token.value
+					})
+				}
+			}
+			else {
+				return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+					identifier: ie.base.token.value
+				})
+			}
+		}
+	} else {
+		output_val = ie.base.eval(process_id)!
+	}
 	for index in ie.indexes {
 		output_val, name_of_var = output_val.get_indexed_value(index.eval(process_id)!,
 			name_of_var)!
@@ -975,15 +999,15 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 			}
 
 			mut eval_output := EvalOutput(i64(0))
-			
+
 			if var_.base.token.reserved != 'self' {
-				if var_.base.token.reserved != ''  {
-				return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+				if var_.base.token.reserved != '' {
+					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
 						identifier: var_.base.token.value
 					})
 				}
 				eval_output = var_.base.eval(process_id)!
-			}else{
+			} else {
 				process_value := program_state_map[process_id[process_id.len - 1]] or {
 					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
 						identifier: var_.base.token.value
@@ -992,11 +1016,11 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 
 				match process_value.hint {
 					.@none {
-						eval_output = identifier_value_map[process_value.value as string] or { 
+						eval_output = identifier_value_map[process_value.value as string] or {
 							return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
 								identifier: var_.base.token.value
 							})
-						 }
+						}
 					}
 					else {
 						return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
@@ -1205,11 +1229,11 @@ fn (for_st ForStatement) eval(process_id []string) !EvalOutput {
 
 pub struct FunctionDeclaration {
 pub mut:
-	name       Identifier
-	parameters []Identifier
-	body       []Node
-	scope      string @[required]
-	prev_scope string @[required]
+	name           Identifier
+	parameters     []Identifier
+	body           []Node
+	scope          string @[required]
+	prev_scope     string @[required]
 }
 
 pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
@@ -1268,9 +1292,8 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 			function_from_value := base.eval(process_id)!
 			match function_from_value {
 				FunctionStore {
-
 					processes := gen_map_key(base.base.from, process_id, base.base.token.sep_value)
-					mut in_process := ""
+					mut in_process := ''
 					for process in processes {
 						if process in identifier_value_map {
 							in_process = process
