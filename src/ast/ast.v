@@ -1237,6 +1237,21 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 			function_from_value := base.eval(process_id)!
 			match function_from_value {
 				FunctionStore {
+
+					processes := gen_map_key(base.base.from, process_id, base.base.token.sep_value)
+					mut in_process := ""
+					for process in processes {
+						if process in identifier_value_map {
+							in_process = process
+							break
+						}
+					}
+
+					program_state_map[new_process_id] = ProgramStateStore{
+						hint:  .@none
+						value: in_process
+					}
+
 					return function_from_value.execute(ce, all_processes)
 				}
 				else {
@@ -1253,7 +1268,7 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 						unsafe {
 							x := std_functions[base.token.value]
 
-							if ce.call_path == "${base_dir_path}${x.path}" {
+							if ce.call_path == '${base_dir_path}${x.path}' {
 								return x.func(all_processes, ce.arguments)
 							}
 						}

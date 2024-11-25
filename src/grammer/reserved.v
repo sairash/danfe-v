@@ -32,7 +32,7 @@ pub const reserved_symbols = {
 	'chr':        []
 	'rand_str':   []
 	'rand_int':   []
-	'server':   []
+	'self':       ['aafu']
 	// 'not':      ['hoina']
 	// 'or':       ['ya']
 	// 'and':      ['ra']
