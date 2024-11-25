@@ -1,0 +1,19 @@
+assert("start", "table_self_function_operations")
+
+x = []
+x["first_name"] = "Sairash"
+x["last_name"] = "Gautam"
+
+x["full_name"] = function () {
+    return self["first_name"] + " " + self["middle_name"] + " " + self["last_name"]
+}
+
+
+x["set_middle_name"] = function () {
+    self["middle_name"] = "Sharma"
+}
+
+x["set_middle_name"]()
+
+assert("print", "calculating_function_add", x["full_name"](), "Sairash Sharma Gautam")
+assert("stop", "table_self_function_operations")
