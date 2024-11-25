@@ -9,6 +9,7 @@ import './language_test/loops.df'
 import './language_test/conditions.df'
 import './language_test/built_in_functions.df'
 import './language_test/v_test.df'
+import './language_test/table_self.df'
 
 
 
