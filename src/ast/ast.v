@@ -973,7 +973,38 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 					})
 				}
 			}
-			mut eval_output := var_.base.eval(process_id)!
+
+			mut eval_output := EvalOutput(i64(0))
+			
+			if var_.base.token.reserved != 'self' {
+				if var_.base.token.reserved != ''  {
+				return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+						identifier: var_.base.token.value
+					})
+				}
+				eval_output = var_.base.eval(process_id)!
+			}else{
+				process_value := program_state_map[process_id[process_id.len - 1]] or {
+					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+						identifier: var_.base.token.value
+					})
+				}
+
+				match process_value.hint {
+					.@none {
+						eval_output = identifier_value_map[process_value.value as string] or { 
+							return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+								identifier: var_.base.token.value
+							})
+						 }
+					}
+					else {
+						return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+							identifier: var_.base.token.value
+						})
+					}
+				}
+			}
 			return eval_output.update_indexed_value(var_.indexes, asss.init, var_.base.from.join('.'),
 				process_id, asss.hint)
 		}
