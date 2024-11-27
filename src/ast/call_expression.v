@@ -14,7 +14,7 @@ struct App {
 	vweb.Context
 }
 
-fn print_reserved_function(process_id []string, args []Node, new_line bool) ! {
+fn print_reserved_function(process_id []&Process, args []Node, new_line bool) ! {
 	for arg in args {
 		eval_output := arg.eval(process_id)!
 
@@ -25,19 +25,19 @@ fn print_reserved_function(process_id []string, args []Node, new_line bool) ! {
 	}
 }
 
-fn input_reserved_function(process_id []string, arg Node) !EvalOutput {
+fn input_reserved_function(process_id []&Process, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 
 	print(eval_output.get_as_string())
 	return os.get_line()
 }
 
-fn type_of_value_reserved_function(process_id []string, arg Node) !EvalOutput {
+fn type_of_value_reserved_function(process_id []&Process, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return eval_output.get_token_type()
 }
 
-fn len_reserved_function(process_id []string, arg Node) !EvalOutput {
+fn len_reserved_function(process_id []&Process, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return match eval_output {
 		Table, string {
@@ -49,7 +49,7 @@ fn len_reserved_function(process_id []string, arg Node) !EvalOutput {
 	}
 }
 
-fn int_reserved_function(process_id []string, arg Node) !EvalOutput {
+fn int_reserved_function(process_id []&Process, arg Node) !EvalOutput {
 	eval_output := arg.eval(process_id)!
 	return match eval_output {
 		i64 {
@@ -71,7 +71,7 @@ fn assert_print(emote string, test_type string, function_name string) {
 	println('${emote} ${test_type}: ${function_name}')
 }
 
-fn assert_reserved_function(process_id []string, arg []Node, func_name string) !EvalOutput {
+fn assert_reserved_function(process_id []&Process, arg []Node, func_name string) !EvalOutput {
 	if arg.len < 2 {
 		return error_gen('eval', 'assert', errors_df.ErrorArgumentsMisMatch{
 			func_name:       func_name
@@ -154,21 +154,21 @@ fn assert_reserved_function(process_id []string, arg []Node, func_name string) !
 }
 
 const default_call_operations = {
-	'print':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'print':    fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		print_reserved_function(process_id, arguments, false)!
 		return i64(1)
 	}
-	'println':  fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'println':  fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		print_reserved_function(process_id, arguments, true)!
 		return i64(1)
 	}
-	'assert':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'assert':   fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if '-t' in (identifier_value_map['main.__args__'] or { return i64(0) } as Table).table {
 			return assert_reserved_function(process_id, arguments, base.token.value)
 		}
 		return i64(1)
 	}
-	'input':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'input':    fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'input', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -178,7 +178,7 @@ const default_call_operations = {
 		}
 		return input_reserved_function(process_id, arguments[0])
 	}
-	'typeof':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'typeof':   fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'typeof', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -189,7 +189,7 @@ const default_call_operations = {
 
 		return type_of_value_reserved_function(process_id, arguments[0])
 	}
-	'len':      fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'len':      fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'len', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -199,7 +199,7 @@ const default_call_operations = {
 		}
 		return len_reserved_function(process_id, arguments[0])
 	}
-	'int':      fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'int':      fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'int', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -209,7 +209,7 @@ const default_call_operations = {
 		}
 		return int_reserved_function(process_id, arguments[0])
 	}
-	'float':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'float':    fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'float', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -233,7 +233,7 @@ const default_call_operations = {
 			}
 		}
 	}
-	'chr':      fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'chr':      fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -257,7 +257,7 @@ const default_call_operations = {
 			}
 		}
 	}
-	'string':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'string':   fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -268,7 +268,7 @@ const default_call_operations = {
 		eval_output := arguments[0].eval(process_id)!
 		return '${eval_output.get_as_string()}'
 	}
-	'panic':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'panic':    fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len != 1 {
 			return error_gen('eval', 'string', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -280,7 +280,7 @@ const default_call_operations = {
 
 		return error_gen('system', 'panic', errors_df.ErrorCustomError{eval_output.get_as_string()})
 	}
-	'rand_str': fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'rand_str': fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		mut length := 10
 
 		if arguments.len > 1 {
@@ -309,11 +309,11 @@ const default_call_operations = {
 		}
 		return rand.string(length)
 	}
-	'rand_int': fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'rand_int': fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		rand_int := rand.i64()
 		return if rand_int < 0 { rand_int * -1 } else { rand_int }
 	}
-	'table':    fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
+	'table':    fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
 		if arguments.len > 1 {
 			return error_gen('eval', 'rand', errors_df.ErrorArgumentsMisMatch{
 				func_name:       base.token.value
@@ -331,89 +331,89 @@ const default_call_operations = {
 			}
 		}
 	}
-	'server':   fn (process_id []string, base Identifier, arguments []Node) !EvalOutput {
-		port := arguments[0].eval(process_id)!
-		if port is i64 {
-			server_functions := arguments[1].eval(process_id)!
-			all_p_server = process_id.clone()
-			server_url_function_map = server_functions
-			vweb.run(&App{}, int(port))
-		}
+	// 'server':   fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
+	// 	port := arguments[0].eval(process_id)!
+	// 	if port is i64 {
+	// 		server_functions := arguments[1].eval(process_id)!
+	// 		all_p_server = process_id.clone()
+	// 		server_url_function_map = server_functions
+	// 		vweb.run(&App{}, int(port))
+	// 	}
 
-		return i64(0)
-	}
+	// 	return i64(0)
+	// }
 }
 
-@['/:...']
-fn (mut app App) wildcard(path string) vweb.Result {
-	mut query_builder := Table{
-		table:  {}
-		is_arr: false
-	}
+// @['/:...']
+// fn (mut app App) wildcard(path string) vweb.Result {
+// 	mut query_builder := Table{
+// 		table:  {}
+// 		is_arr: false
+// 	}
 
-	for key, query in app.Context.query {
-		query_builder.table[key] = query
-	}
+// 	for key, query in app.Context.query {
+// 		query_builder.table[key] = query
+// 	}
 
-	query_builder.len = query_builder.table.len
+// 	query_builder.len = query_builder.table.len
 
-	mut form_builder := Table{
-		table:  {}
-		is_arr: false
-	}
+// 	mut form_builder := Table{
+// 		table:  {}
+// 		is_arr: false
+// 	}
 
-	for key, form in app.Context.form {
-		form_builder.table[key] = form
-	}
+// 	for key, form in app.Context.form {
+// 		form_builder.table[key] = form
+// 	}
 
-	form_builder.len = form_builder.table.len
+// 	form_builder.len = form_builder.table.len
 
-	mut files_builder := Table{
-		table:  {}
-		is_arr: false
-	}
+// 	mut files_builder := Table{
+// 		table:  {}
+// 		is_arr: false
+// 	}
 
-	for key, files in app.Context.files {
-		mut files_table := Table{
-			table:  {}
-			is_arr: true
-		}
-		for key_file, file in files {
-			files_table.table['${key_file}'] = Table{
-				table:  {
-					'filename':     file.filename
-					'content_type': file.content_type
-					'data':         file.data
-				}
-				len:    3
-				is_arr: false
-			}
-		}
-		files_table.len = files_table.table.len
-		files_builder.table[key] = files_table
-	}
+// 	for key, files in app.Context.files {
+// 		mut files_table := Table{
+// 			table:  {}
+// 			is_arr: true
+// 		}
+// 		for key_file, file in files {
+// 			files_table.table['${key_file}'] = Table{
+// 				table:  {
+// 					'filename':     file.filename
+// 					'content_type': file.content_type
+// 					'data':         file.data
+// 				}
+// 				len:    3
+// 				is_arr: false
+// 			}
+// 		}
+// 		files_table.len = files_table.table.len
+// 		files_builder.table[key] = files_table
+// 	}
 
-	request_table_builder := Table{
-		table:  {
-			'host':           app.Context.req.host
-			'url':            app.Context.req.url
-			'data':           app.Context.req.data
-			'method':         app.Context.req.method.str()
-			'verbos':         if app.Context.req.verbose { i64(1) } else { i64(0) }
-			'page_gen_start': app.Context.page_gen_start
-			'query':          query_builder
-			'form':           form_builder
-			'files':          files_builder
-		}
-		is_arr: false
-		len:    9
-	}
+// 	request_table_builder := Table{
+// 		table:  {
+// 			'host':           app.Context.req.host
+// 			'url':            app.Context.req.url
+// 			'data':           app.Context.req.data
+// 			'method':         app.Context.req.method.str()
+// 			'verbos':         if app.Context.req.verbose { i64(1) } else { i64(0) }
+// 			'page_gen_start': app.Context.page_gen_start
+// 			'query':          query_builder
+// 			'form':           form_builder
+// 			'files':          files_builder
+// 		}
+// 		is_arr: false
+// 		len:    9
+// 	}
 
-	// println(app.Context.req)
-	return app.text(((server_url_function_map as Table).table['/'] or { panic('Not Found') } as FunctionStore).execute_with_eval_output_as_arguments([
-		request_table_builder,
-	], all_p_server) or { panic(err) }.get_as_string())
-}
+// 	// println(app.Context.req)
+// 	return app.text(((server_url_function_map as Table).table['/'] or { panic('Not Found') } as FunctionStore).execute_with_eval_output_as_arguments([
+// 		request_table_builder,
+// 	], all_p_server) or { panic(err) }.get_as_string())
+// }
 
 struct DataTypeParser {
 mut:
