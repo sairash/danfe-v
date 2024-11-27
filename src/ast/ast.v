@@ -17,6 +17,12 @@ __global server_url_function_map = EvalOutput{}
 
 __global base_dir_path = os.dir(os.executable())
 
+
+__global empty_process = &Process{
+	''
+	false
+}
+
 struct Table {
 mut:
 	table  map[string]EvalOutput
@@ -25,6 +31,16 @@ mut:
 }
 
 type EvalOutput = string | i64 | f64 | Table | FunctionStore
+
+pub struct Process {
+	pub:
+	value     string
+	is_module bool
+}
+
+pub interface Node {
+	eval(process_id []&Process) !EvalOutput
+}
 
 pub fn add_args_to_table(full_module_ string, args []string) {
 	if '${full_module_}.__args__' in identifier_value_map {
@@ -154,7 +170,7 @@ pub fn (evl EvalOutput) get_indexed_value(value EvalOutput, name_of_var string) 
 	})
 }
 
-pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, node Node, name_of_var string, process_id []string, insert_op string) !EvalOutput {
+pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, node Node, name_of_var string, process_id []&Process, insert_op string) !EvalOutput {
 	mut value := EvalOutput(i64(1))
 
 	match node {
@@ -239,7 +255,7 @@ pub fn (mut evl EvalOutput) update_indexed_value(indexes []Node, node Node, name
 
 			if insert_op == '<<' {
 				// Randomly adds a key to the map with the table
-				evaluation.table[gen_process_id('')] = value
+				evaluation.table[rand.uuid_v4()] = value
 				evaluation.len = evaluation.len + 1
 				return i64(1)
 			} else if insert_op == '>>' {
@@ -318,7 +334,7 @@ fn (evl EvalOutput) is_true() bool {
 	}
 }
 
-fn is_condition_met(process_id []string, condition ?Node) !bool {
+fn is_condition_met(process_id []&Process, condition ?Node) !bool {
 	cond_eval := condition or { return true }
 		.eval(process_id)!
 
@@ -375,26 +391,39 @@ pub fn (evl EvalOutput) get_as_string() string {
 	return output_str
 }
 
-pub fn gen_process_id(process_id string) string {
-	return if process_id != '' { process_id } else { rand.ascii(14) }
+pub fn gen_process_id(process_id &Process) &Process {
+	return if process_id.value != '' && !process_id.is_module {
+		process_id
+	} else {
+		&Process{
+			value:     rand.ascii(14)
+			is_module: false
+		}
+	}
 }
 
-fn gen_map_key(from []string, process_id []string, sep_value []string) []string {
+fn gen_map_key(from []string, process_id []&Process, sep_value []string) []string {
 	mut ret_processes := []string{}
+	mut value_joined := ''
+	sep_value_len := sep_value.len
+	if sep_value_len > 1 {
+		value_joined = '.' + sep_value[..sep_value_len - 1].join('.')
+	}
 	from_joined := from.join('.')
-	value_joined := sep_value[..sep_value.len - 1].join('.')
-	last_value := sep_value[sep_value.len - 1]
+	last_value := sep_value[sep_value_len - 1]
 
 	for _, process in process_id {
-		mut join_val := '${from_joined}${if process != '' {
-			'.' + process
+		mut join_val := ''
+		if process.is_module {
+			join_val = process.value
 		} else {
-			''
-		}}${if value_joined != '' {
-			'.' + value_joined
-		} else {
-			''
-		}}'
+			join_val = '${from_joined}${if process.value != '' {
+				'.' + process.value
+			} else {
+				''
+			}}${value_joined}'
+		}
+
 		ret_processes << join_val
 		join_val += '.${last_value}'
 		ret_processes << join_val
@@ -425,7 +454,7 @@ fn remove_space(string_value string) string {
 	return string_value.replace(' ', '').replace('\n', '').replace('\t', '')
 }
 
-fn replace_identifier_in_string(string_value string, from []string, process_id []string) !string {
+fn replace_identifier_in_string(string_value string, from []string, process_id []&Process) !string {
 	mut ret_string := ''
 	mut start_index := 0
 	mut cur_index := 0
@@ -480,16 +509,17 @@ struct ProgramStateStore {
 
 pub struct FunctionStore {
 pub mut:
-	parameters []Identifier
-	body       []Node
-	scope      string
+	parameters         []Identifier
+	body               []Node
+	scope              &Process
+	declared_at_module string @[required]
 }
 
-fn (fs FunctionStore) eval(process_id []string) !EvalOutput {
+fn (fs FunctionStore) eval(process_id []&Process) !EvalOutput {
 	return i64(1)
 }
 
-fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutput, process_id []string) !EvalOutput {
+fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutput, process_id []&Process) !EvalOutput {
 	if fs.parameters.len != arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
 			expected: '${fs.parameters.len} parameters'
@@ -502,15 +532,22 @@ fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutp
 			true)!
 	}
 
+
+	mut new_processes := process_id.clone()
+	new_processes.insert(0, &Process{
+		fs.declared_at_module
+		true
+	})
+
 	for val in fs.body {
-		val.eval(process_id)!
+		val.eval(new_processes)!
 
 		for process in process_id {
-			if process in program_state_map {
-				program_store := program_state_map[process]
+			if process.value in program_state_map {
+				program_store := program_state_map[process.value]
 				match program_store.hint {
 					.return_ {
-						program_state_map.delete(process)
+						program_state_map.delete(process.value)
 						return program_store.value
 					}
 					else {}
@@ -523,7 +560,7 @@ fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutp
 	return i64(0)
 }
 
-fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutput {
+fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOutput {
 	if fs.parameters.len != ce.arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
 			expected: '${fs.parameters.len} parameters for function ${(ce.base as Identifier).from}.${(ce.base as Identifier).token.value}(${fs.parameters.map(it.token.value).join(', ')})'
@@ -539,11 +576,11 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []string) !EvalOutpu
 		val.eval(process_id)!
 
 		for process in process_id {
-			if process in program_state_map {
-				program_store := program_state_map[process]
+			if process.value in program_state_map {
+				program_store := program_state_map[process.value]
 				match program_store.hint {
 					.return_ {
-						program_state_map.delete(process)
+						program_state_map.delete(process.value)
 						return program_store.value
 					}
 					else {}
@@ -564,10 +601,6 @@ pub fn set_if_module_not_already_init(full_module_ string, module_ string) bool 
 	identifier_value_map['${full_module_}.__module__'] = module_
 
 	return true
-}
-
-pub interface Node {
-	eval(process_id []string) !EvalOutput
 }
 
 fn check_eval_name(output EvalOutput) string {
@@ -614,7 +647,7 @@ pub mut:
 	from  []string @[required]
 }
 
-fn (li Litreal) eval(process_id []string) !EvalOutput {
+fn (li Litreal) eval(process_id []&Process) !EvalOutput {
 	match li.hint {
 		.integer {
 			return EvalOutput(li.value.i64())
@@ -645,7 +678,7 @@ pub mut:
 	right    Node
 }
 
-fn (bi Binary) eval(process_id []string) !EvalOutput {
+fn (bi Binary) eval(process_id []&Process) !EvalOutput {
 	left_eval := bi.left.eval(process_id)!
 	right_eval := bi.right.eval(process_id)!
 
@@ -702,7 +735,7 @@ pub mut:
 	right    Node
 }
 
-fn (lo Logical) eval(process_id []string) !EvalOutput {
+fn (lo Logical) eval(process_id []&Process) !EvalOutput {
 	left_eval := lo.left.eval(process_id)!
 	right_eval := lo.right.eval(process_id)!
 
@@ -721,11 +754,11 @@ pub mut:
 	indexes []Node
 }
 
-fn (ie IndexExpression) eval(process_id []string) !EvalOutput {
+fn (ie IndexExpression) eval(process_id []&Process) !EvalOutput {
 	mut output_val := EvalOutput(i64(0))
 	mut name_of_var := ie.base.token.value
 	if ie.base.token.reserved == 'self' {
-		process_value := program_state_map[process_id[process_id.len - 1]] or {
+		process_value := program_state_map[process_id[process_id.len - 1].value] or {
 			return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
 				identifier: ie.base.token.value
 			})
@@ -762,7 +795,7 @@ pub mut:
 	value Node
 }
 
-fn (tk TableKey) eval(process_id []string) !EvalOutput {
+fn (tk TableKey) eval(process_id []&Process) !EvalOutput {
 	return tk.value.eval(process_id)!
 }
 
@@ -771,7 +804,7 @@ pub mut:
 	fields []Node
 }
 
-fn (te TableConstructorExpression) eval(process_id []string) !EvalOutput {
+fn (te TableConstructorExpression) eval(process_id []&Process) !EvalOutput {
 	mut set_array := false
 	mut table := Table{
 		table:  {}
@@ -813,7 +846,7 @@ pub mut:
 	variable Identifier
 }
 
-fn (ds DelStatement) eval(process_id []string) !EvalOutput {
+fn (ds DelStatement) eval(process_id []&Process) !EvalOutput {
 	processes := gen_map_key(ds.variable.from, process_id, ds.variable.token.sep_value)
 
 	if processes.len > 0 {
@@ -829,7 +862,7 @@ pub mut:
 	from   []string
 }
 
-fn (vb VBlock) eval(process_id []string) !EvalOutput {
+fn (vb VBlock) eval(process_id []&Process) !EvalOutput {
 	res := os.execute_opt('v -e \'${replace_identifier_in_string(vb.v_code, vb.from, process_id)!.replace('return(',
 		'print(')}\'')!
 
@@ -858,7 +891,7 @@ pub mut:
 	from_module_ []string
 }
 
-fn (im ImportStatement) eval(process_id []string) !EvalOutput {
+fn (im ImportStatement) eval(process_id []&Process) !EvalOutput {
 	return '${im.from_module_.join('.')}.${im.module_}'
 }
 
@@ -868,7 +901,7 @@ pub mut:
 	from  []string
 }
 
-fn (i Identifier) eval(process_id []string) !EvalOutput {
+fn (i Identifier) eval(process_id []&Process) !EvalOutput {
 	processes := gen_map_key(i.from, process_id, i.token.sep_value)
 	for process in processes {
 		if process in identifier_value_map {
@@ -881,15 +914,16 @@ fn (i Identifier) eval(process_id []string) !EvalOutput {
 	return error_gen('eval', 'identifier', errors_df.ErrorUndefinedToken{ token: i.token.value })
 }
 
-fn (i Identifier) assign(process_id []string, process string, value EvalOutput) {
-	if process_id.len > 0 && process_id[process_id.len - 1] != '' {
-		identifier_assignment_tracker[process_id[process_id.len - 1]] << process
+fn (i Identifier) assign(process_id []&Process, process string, value EvalOutput) {
+	if process_id.len > 0 && process_id[process_id.len - 1].value != ''
+		&& !process_id[process_id.len - 1].is_module {
+		identifier_assignment_tracker[process_id[process_id.len - 1].value] << process
 	}
 	identifier_value_map[process] = value
 	return
 }
 
-fn (i Identifier) set_value(process_id []string, node Node, force bool, eval_output EvalOutput, use_eval bool) ! {
+fn (i Identifier) set_value(process_id []&Process, node Node, force bool, eval_output EvalOutput, use_eval bool) ! {
 	processes := gen_map_key(i.from, process_id, i.token.sep_value)
 
 	if !force {
@@ -946,7 +980,7 @@ pub mut:
 	init     Node
 }
 
-fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
+fn (asss AssignmentStatement) eval(process_id []&Process) !EvalOutput {
 	var_ := asss.variable
 	match var_ {
 		Identifier {
@@ -1008,7 +1042,7 @@ fn (asss AssignmentStatement) eval(process_id []string) !EvalOutput {
 				}
 				eval_output = var_.base.eval(process_id)!
 			} else {
-				process_value := program_state_map[process_id[process_id.len - 1]] or {
+				process_value := program_state_map[process_id[process_id.len - 1].value] or {
 					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
 						identifier: var_.base.token.value
 					})
@@ -1044,7 +1078,7 @@ pub mut:
 	argument Node
 }
 
-fn (unary_ &UnaryExpression) eval(process_id []string) !EvalOutput {
+fn (unary_ &UnaryExpression) eval(process_id []&Process) !EvalOutput {
 	match unary_.operator {
 		'-' {
 			argument_evalualted := unary_.argument.eval(process_id)!
@@ -1082,7 +1116,7 @@ pub mut:
 	body      []Node
 }
 
-fn (cond &ConditionClause) eval(process_id []string) !EvalOutput {
+fn (cond &ConditionClause) eval(process_id []&Process) !EvalOutput {
 	if cond.hint != Conditions.else_clause && cond.condition == none {
 		return error_gen('eval', 'condition', errors_df.ErrorNoConditionsProvided{
 			token: '${cond.hint}'
@@ -1125,7 +1159,7 @@ pub mut:
 	clauses []Node
 }
 
-fn (if_statement IfStatement) eval(process_id []string) !EvalOutput {
+fn (if_statement IfStatement) eval(process_id []&Process) !EvalOutput {
 	for clause in if_statement.clauses {
 		ret_value := clause.eval(process_id)! as Table
 		if ret_value.table['0'] or { break } as string == 'value' {
@@ -1138,9 +1172,9 @@ fn (if_statement IfStatement) eval(process_id []string) !EvalOutput {
 
 pub struct BreakStatement {}
 
-fn (br BreakStatement) eval(process_id []string) !EvalOutput {
+fn (br BreakStatement) eval(process_id []&Process) !EvalOutput {
 	if process_id.len > 0 {
-		program_state_map[process_id[process_id.len - 1]] = ProgramStateStore{
+		program_state_map[process_id[process_id.len - 1].value] = ProgramStateStore{
 			hint:  ProgramState.break_
 			value: i64(0)
 		}
@@ -1154,9 +1188,9 @@ pub mut:
 	value Node
 }
 
-fn (rt ReturnStatement) eval(process_id []string) !EvalOutput {
+fn (rt ReturnStatement) eval(process_id []&Process) !EvalOutput {
 	if process_id.len > 0 {
-		program_state_map[process_id[process_id.len - 1]] = ProgramStateStore{
+		program_state_map[process_id[process_id.len - 1].value] = ProgramStateStore{
 			hint:  ProgramState.return_
 			value: rt.value.eval(process_id)!
 		}
@@ -1167,9 +1201,9 @@ fn (rt ReturnStatement) eval(process_id []string) !EvalOutput {
 
 pub struct ContinueStatement {}
 
-fn (br ContinueStatement) eval(process_id []string) !EvalOutput {
+fn (br ContinueStatement) eval(process_id []&Process) !EvalOutput {
 	if process_id.len > 0 {
-		program_state_map[process_id[process_id.len - 1]] = ProgramStateStore{
+		program_state_map[process_id[process_id.len - 1].value] = ProgramStateStore{
 			hint:  ProgramState.continue_
 			value: i64(0)
 		}
@@ -1185,39 +1219,39 @@ pub mut:
 	body      []Node
 }
 
-fn (for_st ForStatement) eval(process_id []string) !EvalOutput {
+fn (for_st ForStatement) eval(process_id []&Process) !EvalOutput {
 	new_process_id := gen_process_id(process_id[process_id.len - 1])
 	mut all_processes := process_id.clone()
 	all_processes << new_process_id
 
-	identifier_assignment_tracker[new_process_id] = []
+	identifier_assignment_tracker[new_process_id.value] = []
 	defer {
-		delete_process_memory(new_process_id)
+		delete_process_memory(new_process_id.value)
 	}
 
 	for {
 		if is_condition_met(all_processes, for_st.condition)! {
 			for st in for_st.body {
-				if new_process_id !in program_state_map {
+				if new_process_id.value !in program_state_map {
 					st.eval(all_processes)!
 				} else {
 					break
 				}
 			}
 		} else {
-			program_state_map.delete(new_process_id)
+			program_state_map.delete(new_process_id.value)
 			break
 		}
 
-		match program_state_map[new_process_id].hint {
+		match program_state_map[new_process_id.value].hint {
 			.return_ {
 				break
 			}
 			.continue_ {
-				program_state_map.delete(new_process_id)
+				program_state_map.delete(new_process_id.value)
 			}
 			.break_ {
-				program_state_map.delete(new_process_id)
+				program_state_map.delete(new_process_id.value)
 				break
 			}
 			.@none {}
@@ -1229,14 +1263,14 @@ fn (for_st ForStatement) eval(process_id []string) !EvalOutput {
 
 pub struct FunctionDeclaration {
 pub mut:
-	name           Identifier
-	parameters     []Identifier
-	body           []Node
-	scope          string @[required]
-	prev_scope     string @[required]
+	name       Identifier
+	parameters []Identifier
+	body       []Node
+	scope      &Process @[required]
+	prev_scope &Process @[required]
 }
 
-pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
+pub fn (fd FunctionDeclaration) eval(process_id []&Process) !EvalOutput {
 	if fd.name.token.reserved != '' {
 		return error_gen('eval', 'function_declaration', errors_df.ErrorTryingToUseReservedIdentifier{
 			identifier: fd.name.token.value
@@ -1255,9 +1289,10 @@ pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
 	}
 
 	identifier_value_map[processes[processes.len - 1]] = FunctionStore{
-		parameters: fd.parameters
-		body:       fd.body
-		scope:      fd.scope
+		parameters:         fd.parameters
+		body:               fd.body
+		scope:              fd.scope
+		declared_at_module: fd.name.from.join('.')
 	}
 
 	return i64(1)
@@ -1265,7 +1300,7 @@ pub fn (fd FunctionDeclaration) eval(process_id []string) !EvalOutput {
 
 pub struct FunctionDeclared {}
 
-fn (fdd FunctionDeclared) eval(process_id []string) !EvalOutput {
+fn (fdd FunctionDeclared) eval(process_id []&Process) !EvalOutput {
 	return i64(1)
 }
 
@@ -1276,14 +1311,14 @@ pub mut:
 	arguments []Node
 }
 
-fn (ce CallExpression) eval(process_id []string) !EvalOutput {
-	new_process_id := gen_process_id('')
+fn (ce CallExpression) eval(process_id []&Process) !EvalOutput {
+	new_process_id := gen_process_id(empty_process)
 	mut all_processes := process_id.clone()
 	all_processes << new_process_id
 
-	identifier_assignment_tracker[new_process_id] = []
+	identifier_assignment_tracker[new_process_id.value] = []
 	defer {
-		delete_process_memory(new_process_id)
+		delete_process_memory(new_process_id.value)
 	}
 
 	base := ce.base
@@ -1301,7 +1336,7 @@ fn (ce CallExpression) eval(process_id []string) !EvalOutput {
 						}
 					}
 
-					program_state_map[new_process_id] = ProgramStateStore{
+					program_state_map[new_process_id.value] = ProgramStateStore{
 						hint:  .@none
 						value: in_process
 					}
