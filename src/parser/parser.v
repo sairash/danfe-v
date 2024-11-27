@@ -15,9 +15,8 @@ pub mut:
 	ast        ast.Chunk
 	module_    []string @[required]
 	cur_file   string
-	scope      string @[required]
+	scope      &ast.Process @[required]
 }
-
 
 
 
@@ -465,16 +464,16 @@ fn (mut p Parse) parse_assignment() !ast.Node {
 			}
 		})!
 
-
 		if p.check_current_identifier_reserved('function') {
 			p.eat_with_name_token(token.Token{
 				token_type: token.Identifier{}
 			})!
 
 			previous_scope := p.scope
-			p.scope = ast.gen_process_id('')
+			p.scope = ast.gen_process_id(empty_process)
 			mut assignment_func_store := ast.FunctionStore{
-				scope: p.scope
+				scope:              p.scope
+				declared_at_module: p.module_.join('.')
 			}
 			assignment_func_store.parameters, assignment_func_store.body = p.parse_function_inner()!
 
@@ -661,7 +660,7 @@ pub fn Parse.new(path string, module_name []string) !&Parse {
 		ast:       ast.Chunk{}
 		module_:   module_name
 		cur_file:  path
-		scope:     ''
+		scope:     empty_process
 	}
 }
 
@@ -694,6 +693,6 @@ pub fn Parse.new_temp(go_through_file_data string) !&Parse {
 		}
 		module_:  ['']
 		cur_file: '/tmp/sai'
-		scope:    ''
+		scope:    empty_process
 	}
 }

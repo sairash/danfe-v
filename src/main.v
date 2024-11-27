@@ -45,6 +45,8 @@ fn interpreter(parent_path string, child_path string, full_module_name []string,
 	mut pars := parser.Parse.new(child_path, full_module_name)!
 	pars.walk_main()!
 
+
+
 	for i := 0; i < pars.ast.body.len; i += 1 {
 		cur := pars.ast.body[i]
 		match cur {
@@ -54,7 +56,7 @@ fn interpreter(parent_path string, child_path string, full_module_name []string,
 				interpreter(cur.from_path, cur.path, perv_module_name, cur.module_, args)!
 			}
 			else {
-				cur.eval([''])!
+				cur.eval([empty_process])!
 			}
 		}
 	}

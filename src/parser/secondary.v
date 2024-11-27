@@ -139,7 +139,7 @@ fn (mut p Parse) parse_function() !ast.Node {
 			from:  p.module_
 		}
 		parameters: []
-		scope:      ast.gen_process_id('')
+		scope:      ast.gen_process_id(empty_process)
 		prev_scope: p.scope
 	}
 	p.scope = ret_func.scope
@@ -148,12 +148,7 @@ fn (mut p Parse) parse_function() !ast.Node {
 
 	p.scope = ret_func.prev_scope
 
-	mut processes := p.module_.clone()
-	if p.scope != '' {
-		processes << p.scope
-	}
-
-	ret_func.eval(processes)!
+	ret_func.eval([p.scope])!
 
 	return ast.FunctionDeclared{}
 }
