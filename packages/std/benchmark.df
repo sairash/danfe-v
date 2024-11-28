@@ -1,0 +1,17 @@
+import "@/std/time"
+
+function new() {
+    init_table = [
+        "times" => [time.now_unix_nano()]
+    ]
+    init_table["lap"] = function () {
+        println(time.now_unix_nano())
+        # self["times"] << "Hello"
+        self["times"] << time.now_unix_nano()
+    }
+    init_table["stop"] = function () {
+        self["lap"]()
+        println(self["times"])
+    }
+    return init_table
+}
