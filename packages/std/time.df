@@ -1,0 +1,10 @@
+long_months =['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+	'September', 'October', 'November', 'December']
+
+function now() {
+    return time_now_9079766339132815114()
+}
+
+function now_unix_nano() {
+    return time_now_unix_nano_7349991598584833416()
+}
