@@ -17,11 +17,7 @@ __global server_url_function_map = EvalOutput{}
 
 __global base_dir_path = os.dir(os.executable())
 
-
-__global empty_process = &Process{
-	''
-	false
-}
+__global empty_process = &Process{'', false}
 
 struct Table {
 mut:
@@ -33,7 +29,7 @@ mut:
 type EvalOutput = string | i64 | f64 | Table | FunctionStore
 
 pub struct Process {
-	pub:
+pub:
 	value     string
 	is_module bool
 }
@@ -532,12 +528,8 @@ fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutp
 			true)!
 	}
 
-
 	mut new_processes := process_id.clone()
-	new_processes.insert(0, &Process{
-		fs.declared_at_module
-		true
-	})
+	new_processes.insert(0, &Process{fs.declared_at_module, true})
 
 	for val in fs.body {
 		val.eval(new_processes)!
@@ -758,25 +750,38 @@ fn (ie IndexExpression) eval(process_id []&Process) !EvalOutput {
 	mut output_val := EvalOutput(i64(0))
 	mut name_of_var := ie.base.token.value
 	if ie.base.token.reserved == 'self' {
-		process_value := program_state_map[process_id[process_id.len - 1].value] or {
-			return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
-				identifier: ie.base.token.value
-			})
-		}
+		mut found := false
+		// println(program_state_map)
+		// println(process_id)
 
-		match process_value.hint {
-			.@none {
-				output_val = identifier_value_map[process_value.value as string] or {
-					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
-						identifier: ie.base.token.value
-					})
+		for proc in process_id.reverse() {
+			if (proc.value == '' || proc.is_module) && proc.value !in program_state_map {
+				continue
+			}
+
+			unsafe {
+				process_value := program_state_map[proc.value]
+				match process_value.hint {
+					.@none {
+						match process_value.value {
+							string {
+								if process_value.value as string in identifier_value_map {
+									found = true
+									output_val = identifier_value_map[process_value.value as string]
+								}
+							}
+							else {}
+						}
+					}
+					else {}
 				}
 			}
-			else {
-				return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
-					identifier: ie.base.token.value
-				})
-			}
+		}
+
+		if !found {
+			return error_gen('eval', 'notfound', errors_df.ErrorTryingToUseReservedIdentifier{
+				identifier: ie.base.token.value
+			})
 		}
 	} else {
 		output_val = ie.base.eval(process_id)!
@@ -1032,7 +1037,9 @@ fn (asss AssignmentStatement) eval(process_id []&Process) !EvalOutput {
 				}
 			}
 
-			mut eval_output := EvalOutput(i64(0))
+			// println(asss)
+
+			// mut eval_output := EvalOutput(i64(0))
 
 			if var_.base.token.reserved != 'self' {
 				if var_.base.token.reserved != '' {
@@ -1040,31 +1047,43 @@ fn (asss AssignmentStatement) eval(process_id []&Process) !EvalOutput {
 						identifier: var_.base.token.value
 					})
 				}
-				eval_output = var_.base.eval(process_id)!
-			} else {
-				process_value := program_state_map[process_id[process_id.len - 1].value] or {
-					return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
-						identifier: var_.base.token.value
-					})
-				}
 
-				match process_value.hint {
-					.@none {
-						eval_output = identifier_value_map[process_value.value as string] or {
-							return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
-								identifier: var_.base.token.value
-							})
+				mut eval_output := var_.base.eval(process_id)!
+
+				return eval_output.update_indexed_value(var_.indexes, asss.init, var_.base.from.join('.'),
+					process_id, asss.hint)
+			} else {
+				for proc in process_id.reverse() {
+					if (proc.value == '' || proc.is_module) && proc.value !in program_state_map {
+						continue
+					}
+
+					unsafe {
+						process_value := program_state_map[proc.value]
+
+						match process_value.hint {
+							.@none {
+								match process_value.value {
+									string {
+										if process_value.value as string in identifier_value_map {
+											mut eval_output := identifier_value_map[process_value.value as string]
+											// println(asss.ini)
+											return eval_output.update_indexed_value(var_.indexes,
+												asss.init, var_.base.from.join('.'), process_id,
+												asss.hint)
+										}
+									}
+									else {}
+								}
+							}
+							else {}
 						}
 					}
-					else {
-						return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
-							identifier: var_.base.token.value
-						})
-					}
 				}
+				return error_gen('eval', 'assignment', errors_df.ErrorTryingToUseReservedIdentifier{
+					identifier: var_.base.token.value
+				})
 			}
-			return eval_output.update_indexed_value(var_.indexes, asss.init, var_.base.from.join('.'),
-				process_id, asss.hint)
 		}
 		else {}
 	}
@@ -1322,6 +1341,7 @@ fn (ce CallExpression) eval(process_id []&Process) !EvalOutput {
 	}
 
 	base := ce.base
+
 	match base {
 		IndexExpression {
 			function_from_value := base.eval(process_id)!
