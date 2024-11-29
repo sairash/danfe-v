@@ -564,8 +564,13 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOut
 		fs.parameters[i].set_value(process_id, ce.arguments[i], true, '', false)!
 	}
 
+	mut ret_val := EvalOutput(i64(1))
+
 	for val in fs.body {
-		val.eval(process_id)!
+		ret_val = val.eval(process_id)!
+
+		// println(val)
+		// println(ret_val)
 
 		for process in process_id {
 			if process.value in program_state_map {
@@ -582,7 +587,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOut
 		}
 	}
 
-	return i64(1)
+	return ret_val
 }
 
 pub fn set_if_module_not_already_init(full_module_ string, module_ string) bool {
@@ -1209,11 +1214,12 @@ pub mut:
 
 fn (rt ReturnStatement) eval(process_id []&Process) !EvalOutput {
 	if process_id.len > 0 {
+		rt_value := rt.value.eval(process_id)!
 		program_state_map[process_id[process_id.len - 1].value] = ProgramStateStore{
 			hint:  ProgramState.return_
-			value: rt.value.eval(process_id)!
+			value: rt_value
 		}
-		return i64(1)
+		return rt_value
 	}
 	return i64(0)
 }
