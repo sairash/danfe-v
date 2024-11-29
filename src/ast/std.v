@@ -71,6 +71,15 @@ const std_functions = {
 			return i64(0)
 		}
 	}
+	'os_isexe_2133680635482309749':     STD{
+		path:        '/packages/std/os.df'
+		func:        fn (process_id []&Process, arguments []Node) !EvalOutput {
+			if os.is_executable(arguments[0].eval(process_id)! as string) {
+				return i64(1)
+			}
+			return i64(0)
+		}
+	}
 
 
 

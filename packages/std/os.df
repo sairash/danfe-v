@@ -59,6 +59,13 @@ function isfile(path) {
     return os_isfile_2816429377265257685(path)
 }
 
+function isexe(path) {
+    if typeof(path) != "string"{
+        panic("Paths Must be of type string!")
+    }
+    return os_isexe_2133680635482309749(path)
+}
+
 # left to make
-# isexe, rm, rmdir, inputpassword, setenv, temp_dir, unsetenv, user_os, user_names, getenv, 
+# rm, rmdir, inputpassword, setenv, temp_dir, unsetenv, user_os, user_names, getenv, 
 # file_name, file_size, exists, execute_opt, chdir, chmod, chown, abs_path, home_dir, getwd, glob, hostname
