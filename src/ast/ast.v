@@ -552,6 +552,46 @@ fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutp
 	return i64(0)
 }
 
+// fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOutput {
+// 	if fs.parameters.len != ce.arguments.len {
+// 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
+// 			expected: '${fs.parameters.len} parameters for function ${(ce.base as Identifier).from}.${(ce.base as Identifier).token.value}(${fs.parameters.map(it.token.value).join(', ')})'
+// 			found:    '${ce.arguments.len} parameters were passed'
+// 		})
+// 	}
+
+// 	mut new_process_id := process_id.clone()
+// 	if process_id[0].value != fs.declared_at_module {
+// 		new_process_id.prepend(&Process{fs.declared_at_module, true})
+// 	}
+
+// 	for i := 0; i < fs.parameters.len; i++ {
+// 		fs.parameters[i].set_value(new_process_id, ce.arguments[i], true, '', false)!
+// 	}
+
+// 	mut ret_val := EvalOutput(i64(1))
+
+// 	for val in fs.body {
+// 		ret_val = val.eval(new_process_id)!
+
+// 		for process in new_process_id {
+// 			if process.value in program_state_map {
+// 				program_store := program_state_map[process.value]
+// 				match program_store.hint {
+// 					.return_ {
+// 						program_state_map.delete(process.value)
+// 						return program_store.value
+// 					}
+// 					else {}
+// 				}
+// 				break
+// 			}
+// 		}
+// 	}
+
+// 	return ret_val
+// }
+
 fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOutput {
 	if fs.parameters.len != ce.arguments.len {
 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
@@ -568,10 +608,6 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOut
 
 	for val in fs.body {
 		ret_val = val.eval(process_id)!
-
-		// println(val)
-		// println(ret_val)
-
 		for process in process_id {
 			if process.value in program_state_map {
 				program_store := program_state_map[process.value]
@@ -1317,7 +1353,7 @@ pub fn (fd FunctionDeclaration) eval(process_id []&Process) !EvalOutput {
 		parameters:         fd.parameters
 		body:               fd.body
 		scope:              fd.scope
-		declared_at_module: fd.name.from.join('.')
+		declared_at_module: fd.name.from[..fd.name.from.len - 1].join('.')
 	}
 
 	return i64(1)
