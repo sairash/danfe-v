@@ -515,43 +515,6 @@ fn (fs FunctionStore) eval(process_id []&Process) !EvalOutput {
 	return i64(1)
 }
 
-fn (fs FunctionStore) execute_with_eval_output_as_arguments(arguments []EvalOutput, process_id []&Process) !EvalOutput {
-	if fs.parameters.len != arguments.len {
-		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
-			expected: '${fs.parameters.len} parameters'
-			found:    '${arguments.len} parameters were passed'
-		})
-	}
-
-	for i := 0; i < fs.parameters.len; i++ {
-		fs.parameters[i].set_value(process_id, FunctionDeclared{}, true, arguments[i],
-			true)!
-	}
-
-	mut new_processes := process_id.clone()
-	new_processes.insert(0, &Process{fs.declared_at_module, true})
-
-	for val in fs.body {
-		val.eval(new_processes)!
-
-		for process in process_id {
-			if process.value in program_state_map {
-				program_store := program_state_map[process.value]
-				match program_store.hint {
-					.return_ {
-						program_state_map.delete(process.value)
-						return program_store.value
-					}
-					else {}
-				}
-				break
-			}
-		}
-	}
-
-	return i64(0)
-}
-
 // fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOutput {
 // 	if fs.parameters.len != ce.arguments.len {
 // 		return error_gen('eval', 'call_exp', errors_df.ErrorMismatch{
@@ -608,7 +571,7 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOut
 
 	for val in fs.body {
 		ret_val = val.eval(process_id)!
-		for process in process_id {
+		for process in process_id.reverse() {
 			if process.value in program_state_map {
 				program_store := program_state_map[process.value]
 				match program_store.hint {
@@ -616,9 +579,9 @@ fn (fs FunctionStore) execute(ce CallExpression, process_id []&Process) !EvalOut
 						program_state_map.delete(process.value)
 						return program_store.value
 					}
-					else {}
+					.@none{}
+					else {break}
 				}
-				break
 			}
 		}
 	}
@@ -1296,7 +1259,13 @@ fn (for_st ForStatement) eval(process_id []&Process) !EvalOutput {
 				if new_process_id.value !in program_state_map {
 					st.eval(all_processes)!
 				} else {
-					break
+					unsafe {
+						if program_state_map[new_process_id.value].hint == .@none {
+							st.eval(all_processes)!
+						} else {
+							break
+						}
+					}
 				}
 			}
 		} else {
