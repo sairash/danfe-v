@@ -66,25 +66,25 @@ const num_ops = {
 	}
 	'/':  fn (left EvalOutput, right EvalOutput) !EvalOutput {
 		if left is i64 && right is i64 {
-			if right == i64(0) {
+			if i64(right) == i64(0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
-			return EvalOutput(left / right)
+			return f64(f64(left) / f64(right))
 		} else if left is i64 && right is f64 {
 			if right == i64(0.0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
-			return EvalOutput(left / right)
+			return  f64(f64(left) / right)
 		} else if left is f64 && right is i64 {
 			if right == i64(0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
-			return EvalOutput(left / right)
+			return  f64(left / f64(right))
 		} else if left is f64 && right is f64 {
 			if right == i64(0.0) {
 				return error_gen('eval', 'binary', errors_df.ErrorDivisionByZero{})
 			}
-			return EvalOutput(left / right)
+			return  f64(left / right)
 		}
 		return error_gen('eval', 'op', errors_df.ErrorCantUseTokenOfTypeForOperaiton{
 			first_token_type: left.get_token_type()
