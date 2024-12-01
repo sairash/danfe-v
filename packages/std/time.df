@@ -8,3 +8,7 @@ function now() {
 function now_unix_nano() {
     return time_now_unix_nano_7349991598584833416()
 }
+
+function now_unix_milli() {
+    return time_now_unix_milli_9200242907052763788()
+}

@@ -101,4 +101,11 @@ const std_functions = {
 		}
 	}
 
+	'time_now_unix_milli_9200242907052763788':      STD{
+		path: '/packages/std/time.df'
+		func:        fn (process_id []&Process, arguments []Node) !EvalOutput {
+			return time.now().unix_milli()
+		}
+	}
+
 }
