@@ -2,4 +2,7 @@ y = []
 
 y["sai"] = 10
 
-println(y)
+
+if __module__ == "main" {
+    println(y)
+}
