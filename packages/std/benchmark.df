@@ -1,17 +1,34 @@
 import "@/std/time"
 
+function time_taken(current_time) {
+    if x == 0 {
+        last_time = current_time
+        return 0
+    }
+    new_cur = current_time - last_time 
+    last_time = current_time
+    return new_cur / 1_000_000
+}
+
 function new() {
     init_table = [
         "times" => [time.now_unix_nano()]
     ]
     init_table["lap"] = function () {
-        println(time.now_unix_nano())
-        # self["times"] << "Hello"
         self["times"] << time.now_unix_nano()
     }
     init_table["stop"] = function () {
         self["lap"]()
-        println(self["times"])
+
+        last_time = 0
+        x = 0
+
+        println("Time Taken in nano seconds")
+        for  x < len(self["times"]) {
+            println("Lap: %i{x} , Time Taken: ", time_taken(self["times"][x]), " ms")
+            x = x + 1
+        }
+        
     }
     return init_table
 }
