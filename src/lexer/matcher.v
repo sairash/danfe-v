@@ -202,9 +202,7 @@ fn (mut l Lex) match_reserved_symbols(identifier string, identifier_split []stri
 		}
 
 		curr_token_position := l.x
-		next_index := l.file_data.index_after('} endv', int(l.x))
-
-		if next_index == -1 {
+		next_index := l.file_data.index_after('} endv', int(l.x)) or {
 			return l.error_generator('v block', errors_df.ErrorCantFindExpectedToken{
 				token: 'token "} end"'
 			})
