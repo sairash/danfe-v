@@ -6,13 +6,9 @@ import strconv
 import rand
 import lexer
 import token
-import vweb
 
 __global all_p_server = []string{}
 
-struct App {
-	vweb.Context
-}
 
 fn print_reserved_function(process_id []&Process, args []Node, new_line bool) ! {
 	for arg in args {
@@ -331,89 +327,8 @@ const default_call_operations = {
 			}
 		}
 	}
-	// 'server':   fn (process_id []&Process, base Identifier, arguments []Node) !EvalOutput {
-	// 	port := arguments[0].eval(process_id)!
-	// 	if port is i64 {
-	// 		server_functions := arguments[1].eval(process_id)!
-	// 		all_p_server = process_id.clone()
-	// 		server_url_function_map = server_functions
-	// 		vweb.run(&App{}, int(port))
-	// 	}
-
-	// 	return i64(0)
-	// }
 }
 
-// @['/:...']
-// fn (mut app App) wildcard(path string) vweb.Result {
-// 	mut query_builder := Table{
-// 		table:  {}
-// 		is_arr: false
-// 	}
-
-// 	for key, query in app.Context.query {
-// 		query_builder.table[key] = query
-// 	}
-
-// 	query_builder.len = query_builder.table.len
-
-// 	mut form_builder := Table{
-// 		table:  {}
-// 		is_arr: false
-// 	}
-
-// 	for key, form in app.Context.form {
-// 		form_builder.table[key] = form
-// 	}
-
-// 	form_builder.len = form_builder.table.len
-
-// 	mut files_builder := Table{
-// 		table:  {}
-// 		is_arr: false
-// 	}
-
-// 	for key, files in app.Context.files {
-// 		mut files_table := Table{
-// 			table:  {}
-// 			is_arr: true
-// 		}
-// 		for key_file, file in files {
-// 			files_table.table['${key_file}'] = Table{
-// 				table:  {
-// 					'filename':     file.filename
-// 					'content_type': file.content_type
-// 					'data':         file.data
-// 				}
-// 				len:    3
-// 				is_arr: false
-// 			}
-// 		}
-// 		files_table.len = files_table.table.len
-// 		files_builder.table[key] = files_table
-// 	}
-
-// 	request_table_builder := Table{
-// 		table:  {
-// 			'host':           app.Context.req.host
-// 			'url':            app.Context.req.url
-// 			'data':           app.Context.req.data
-// 			'method':         app.Context.req.method.str()
-// 			'verbos':         if app.Context.req.verbose { i64(1) } else { i64(0) }
-// 			'page_gen_start': app.Context.page_gen_start
-// 			'query':          query_builder
-// 			'form':           form_builder
-// 			'files':          files_builder
-// 		}
-// 		is_arr: false
-// 		len:    9
-// 	}
-
-// 	// println(app.Context.req)
-// 	return app.text(((server_url_function_map as Table).table['/'] or { panic('Not Found') } as FunctionStore).execute_with_eval_output_as_arguments([
-// 		request_table_builder,
-// 	], all_p_server) or { panic(err) }.get_as_string())
-// }
 
 struct DataTypeParser {
 mut:

@@ -15,8 +15,11 @@
 <div align="center" style="display:grid;place-items:center;">
 
 [![Made With Vlang](https://img.shields.io/badge/made%20using-vlang-blue?style=for-the-badge&logo=v)](https://vlang.io)
-
+<div>
+Last compiled with V version - 0.4.11 2b4253c
 </div>
+</div>
+
 
 <br>
 
@@ -24,5 +27,4 @@ Danfe is a now **turing complete** programming language that I am hacking up in 
 
 
 ## Concept
-
 A Toy project where I learn and make this language better.

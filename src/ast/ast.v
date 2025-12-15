@@ -456,15 +456,11 @@ fn replace_identifier_in_string(string_value string, from []string, process_id [
 	mut cur_index := 0
 	mut last_index := 0
 	for {
-		cur_index = string_value.index_after('%i{', cur_index)
-
-		if cur_index == -1 {
+		cur_index = string_value.index_after('%i{', cur_index) or  {
 			break
 		}
 
-		last_index = string_value.index_after('}', cur_index)
-
-		if last_index == -1 {
+		last_index = string_value.index_after('}', cur_index) or {
 			return error_gen('eval', 'replace_with_ident', errors_df.ErrorNeededAfterInit{
 				init_token:     '%i{'
 				expected_token: '}'
