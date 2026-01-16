@@ -33,13 +33,6 @@ pub fn (mut l Lex) next() !token.Token {
 		}
 	}
 
-	defer {
-		unsafe {
-			free(l)
-			free(next_char)
-		}
-	}
-
 	return l.change_to_token(next_char)!
 }
 
@@ -63,7 +56,7 @@ fn (mut l Lex) change_to_token(next_char u8) !token.Token {
 		}
 		`,` {
 			return token.Token{
-				token_type: token.Seperator{
+				token_type: token.Separator{
 					value: next_char.ascii_str()
 				}
 				range:      [l.get_x()]
@@ -163,6 +156,19 @@ fn (l &Lex) error_generator(extra_info string, error_data errors_df.ErrorInterfa
 		path:     l.file_path
 		cur_line: l.cur_line
 		cur_col:  l.cur_col
+		range:    [l.cur_col - 1, l.cur_col]
+		error:    error_data
+	}
+}
+
+fn (l &Lex) error_generator_with_range(extra_info string, start_col int, end_col int, error_data errors_df.ErrorInterface) errors_df.DfError {
+	return errors_df.DfError{
+		while:    'lexing'
+		when:     extra_info
+		path:     l.file_path
+		cur_line: l.cur_line
+		cur_col:  start_col
+		range:    [start_col, end_col]
 		error:    error_data
 	}
 }
@@ -188,11 +194,6 @@ fn Lex.go_through_file(path string) !string {
 // Lexer Initializer
 pub fn Lex.new(path string, return_path string) !Lex {
 	go_through_file_data := Lex.go_through_file(path)!
-	defer {
-		unsafe {
-			free(go_through_file_data)
-		}
-	}
 	return Lex{
 		x:                    0
 		file_data:            go_through_file_data

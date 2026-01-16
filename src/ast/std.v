@@ -84,8 +84,6 @@ const std_functions = {
 
 
 
-
-
 	// Time
 	'time_now_9079766339132815114':      STD{
 		path: '/packages/std/time.df'

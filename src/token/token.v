@@ -10,13 +10,8 @@ pub mut:
 	value string
 }
 
-// Seperator for eg: , ;
-pub struct Seperator {
-pub mut:
-	value string
-}
-
-pub struct VBlock {
+// Separator for eg: , ;
+pub struct Separator {
 pub mut:
 	value string
 }
@@ -69,13 +64,12 @@ pub mut:
 pub type TokenType = EOL
 	| EOF
 	| Punctuation
-	| Seperator
+	| Separator
 	| Numeric
 	| String
 	| Identifier
 	| Operator
 	| Comment
-	| VBlock
 
 pub struct Token {
 pub mut:
@@ -99,7 +93,7 @@ pub fn (t Token) get_value() string {
 		Punctuation{
 			return x.value
 		}
-		Seperator{
+		Separator{
 			return x.value
 		}
 		Numeric {
@@ -112,9 +106,6 @@ pub fn (t Token) get_value() string {
 			return x.value
 		}
 		Operator {
-			return x.value
-		}
-		VBlock {
 			return x.value
 		}
 	}
@@ -131,8 +122,8 @@ pub fn (t Token) get_name() string {
 		Punctuation{
 			return "Punctuation (eg: {} or () or [])"
 		}
-		Seperator{
-			return "Seperator (eg: ; or ,)"
+		Separator{
+			return "Separator (eg: ; or ,)"
 		}
 		Comment{
 			return "Comment (eg: #)"
@@ -145,9 +136,6 @@ pub fn (t Token) get_name() string {
 		}
 		Identifier {
 			return "Identifier"
-		}
-		VBlock {
-			return "V Block"
 		}
 		Operator {
 			return "Operator (eg: + , - , * , /)"

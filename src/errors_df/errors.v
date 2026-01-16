@@ -1,35 +1,155 @@
 module errors_df
 
 import cli_df
+import os
 
 pub interface ErrorInterface {
 	output() string
 }
 
+// Debug mode - set to true for detailed error information
+pub const debug_enabled = true
+
 pub struct DfError implements IError {
 	Error
 pub mut:
-	path     string
-	while    string
-	when     string
-	cur_line int
-	cur_col  int
-	error    ErrorInterface
+	path      string
+	while     string  // e.g., "lexing", "parsing", "eval"
+	when      string  // e.g., "match_number", "parse_expression"
+	cur_line  int
+	cur_col   int
+	range     []int   // [start, end] column positions for error highlighting
+	error     ErrorInterface
 }
 
 pub fn (err DfError) msg() string {
-	return gen_custom_error_message(err.while, err.when, err.path, err.cur_line, err.cur_col,
-		err.error)
+	return err.generate_pretty_error()
 }
 
+// Generate a pretty-printed error message with source code context
+fn (err DfError) generate_pretty_error() string {
+	mut result := '\n'
+	
+	// Header with error location
+	result += '${cli_df.red}${cli_df.bold}error${cli_df.reset}'
+	
+	if debug_enabled && err.while != '' {
+		result += ' ${cli_df.cyan}[${err.while}:${err.when}]${cli_df.reset}'
+	}
+	
+	result += ': ${err.error.output()}\n'
+	
+	// File location
+	if err.path != '' {
+		result += '  ${cli_df.blue}-->${cli_df.reset} ${cli_df.underline}${err.path}:${err.cur_line}:${err.cur_col}${cli_df.reset}\n'
+	}
+	
+	// Try to show source code context
+	if err.path != '' && os.is_file(err.path) {
+		source_context := err.get_source_context() or { '' }
+		if source_context != '' {
+			result += source_context
+		}
+	}
+	
+	return result
+}
+
+// Get source code lines around the error for context
+fn (err DfError) get_source_context() !string {
+	file_content := os.read_file(err.path)!
+	lines := file_content.split('\n')
+	
+	if err.cur_line <= 0 || err.cur_line > lines.len {
+		return ''
+	}
+	
+	mut result := '   ${cli_df.blue}|${cli_df.reset}\n'
+	
+	// Calculate line number width for alignment
+	max_line := err.cur_line + 1
+	line_width := '${max_line}'.len
+	
+	// Show 2 lines before the error line (if available)
+	start_line := if err.cur_line > 2 { err.cur_line - 2 } else { 1 }
+	
+	for i := start_line; i <= err.cur_line && i <= lines.len; i++ {
+		line_num := '${i}'.len
+		padding := gen_letter(' ', line_width - line_num)
+		
+		if i == err.cur_line {
+			// Error line - highlighted
+			result += '${cli_df.red}${cli_df.bold}${padding}${i}${cli_df.reset} ${cli_df.blue}|${cli_df.reset} ${lines[i - 1]}\n'
+			
+			// Add error pointer
+			result += err.generate_error_pointer(line_width, lines[i - 1])
+		} else {
+			// Context line
+			result += '${cli_df.cyan}${padding}${i}${cli_df.reset} ${cli_df.blue}|${cli_df.reset} ${lines[i - 1]}\n'
+		}
+	}
+	
+	result += '   ${cli_df.blue}|${cli_df.reset}\n'
+	
+	return result
+}
+
+// Generate the error pointer (^^^^) under the problematic code
+fn (err DfError) generate_error_pointer(line_width int, source_line string) string {
+	padding := gen_letter(' ', line_width)
+	
+	mut start_col := err.cur_col - 1
+	mut end_col := start_col + 1
+	
+	// Use range if provided
+	if err.range.len >= 2 {
+		start_col = err.range[0]
+		end_col = err.range[1]
+	}
+	
+	// Ensure valid bounds
+	if start_col < 0 {
+		start_col = 0
+	}
+	if end_col < start_col {
+		end_col = start_col + 1
+	}
+	if end_col > source_line.len {
+		end_col = source_line.len
+	}
+	
+	// Calculate pointer width
+	pointer_len := end_col - start_col
+	pointer := if pointer_len <= 1 {
+		'^'
+	} else {
+		gen_letter('~', pointer_len)
+	}
+	
+	// Build the pointer line
+	pre_pointer := gen_letter(' ', start_col)
+	return '${padding} ${cli_df.blue}|${cli_df.reset} ${pre_pointer}${cli_df.red}${cli_df.bold}${pointer}${cli_df.reset}\n'
+}
+
+// Legacy function for compatibility
 pub fn gen_custom_error_message(while string, when string, path string, cur_line int, cur_col int, error_int ErrorInterface) string {
-	while_when := '${while} -> ${when}'
-	return gen_error_start_keyword(while_when, path, cur_line, cur_col) + error_int.output() +
-		'\n${cli_df.double_underline}${gen_letter(' ', while_when.len + 23)}${cli_df.reset}\n'
+	err := DfError{
+		while:    while
+		when:     when
+		path:     path
+		cur_line: cur_line
+		cur_col:  cur_col
+		range:    [cur_col - 1, cur_col]
+		error:    error_int
+	}
+	return err.generate_pretty_error()
 }
 
-// have to use this because I am too dumb to make (22r) work
-pub fn gen_letter(letter string, times i64) string {
+// Generate repeated characters
+pub fn gen_letter(letter string, times int) string {
+	if times <= 0 {
+		return ''
+	}
 	mut ret_string := ''
 	for i := 0; i < times; i++ {
 		ret_string += letter
@@ -37,9 +157,9 @@ pub fn gen_letter(letter string, times i64) string {
 	return ret_string
 }
 
-fn gen_error_start_keyword(while_when string, path string, cur_line int, cur_col int) string {
-	return '\n\n${cli_df.double_underline}${gen_letter(' ', while_when.len + 23)}${cli_df.reset}\n${cli_df.red}Error${cli_df.reset} Encountered when ${cli_df.bold}${while_when}${cli_df.reset}: \n${cli_df.underline}${path}:${cur_line}:${cur_col}${cli_df.reset}: '
-}
+// ============================================
+// Error Types
+// ============================================
 
 pub struct ErrorFileIO {
 pub mut:
@@ -47,7 +167,7 @@ pub mut:
 }
 
 fn (err ErrorFileIO) output() string {
-	return 'Failed to open path. path: ${err.file_path}'
+	return 'failed to open file: ${cli_df.yellow}${err.file_path}${cli_df.reset}'
 }
 
 pub struct ErrorMismatch {
@@ -57,13 +177,13 @@ pub mut:
 }
 
 fn (err ErrorMismatch) output() string {
-	return 'Was expecting ${cli_df.green}${err.expected}${cli_df.reset}, but found ${cli_df.red}${err.found}${cli_df.reset}.'
+	return 'expected ${cli_df.green}${err.expected}${cli_df.reset}, found ${cli_df.red}${err.found}${cli_df.reset}'
 }
 
 pub struct ErrorImportPlacement {}
 
 fn (err ErrorImportPlacement) output() string {
-	return 'The Placement of "import" should be at the start of the file before any other operation.'
+	return 'import statements must be at the start of the file'
 }
 
 pub struct ErrorDotCantBeEndOfIdent {
@@ -72,13 +192,13 @@ pub mut:
 }
 
 fn (err ErrorDotCantBeEndOfIdent) output() string {
-	return '"." can\'t be the end of the identifier: ${err.token}'
+	return '"." cannot be at the end of identifier: ${cli_df.yellow}${err.token}${cli_df.reset}'
 }
 
 pub struct ErrorImportTryingToCallSelf {}
 
 fn (err ErrorImportTryingToCallSelf) output() string {
-	return 'Trying to "import" self from self.'
+	return 'cannot import a file from itself'
 }
 
 pub struct ErrorImportCycleDetected {
@@ -88,7 +208,7 @@ pub mut:
 }
 
 fn (err ErrorImportCycleDetected) output() string {
-	return 'Import Cycle Detected. From: ${err.from_file}, Detected: ${err.detected_file}'
+	return 'import cycle detected: ${cli_df.yellow}${err.from_file}${cli_df.reset} -> ${cli_df.yellow}${err.detected_file}${cli_df.reset}'
 }
 
 pub struct ErrorAssert {
@@ -99,11 +219,12 @@ pub mut:
 }
 
 fn (err ErrorAssert) output() string {
-	return '\n❌ FAIL: ${err.function_name} \nOutput: ${err.output} , ${if err.expected != '' {
-		'Expected: ' + err.expected
-	} else {
-		''
-	}}'
+	mut msg := '\n${cli_df.red}❌ FAIL${cli_df.reset}: ${err.function_name}\n'
+	msg += '   ${cli_df.cyan}got${cli_df.reset}:      ${err.output}'
+	if err.expected != '' {
+		msg += '\n   ${cli_df.cyan}expected${cli_df.reset}: ${err.expected}'
+	}
+	return msg
 }
 
 pub struct ErrorCustomError {
@@ -112,7 +233,7 @@ pub mut:
 }
 
 fn (err ErrorCustomError) output() string {
-	return 'Error: ${err.statement}'
+	return err.statement
 }
 
 pub struct ErrorUnexpectedToken {
@@ -121,24 +242,24 @@ pub mut:
 }
 
 fn (err ErrorUnexpectedToken) output() string {
-	return 'There was an unexpected token: ${err.token}'
+	return 'unexpected token: ${cli_df.yellow}${err.token}${cli_df.reset}'
 }
 
 pub struct ErrorTryingToCallNonFunctionIdentifier {}
 
 fn (err ErrorTryingToCallNonFunctionIdentifier) output() string {
-	return 'Trying to call a non function Identifer as a function.'
+	return 'cannot call non-function identifier as a function'
 }
 
-pub struct ErrorCantUseTokenOfTypeForOperaiton {
+pub struct ErrorCantUseTokenOfTypeForOperation {
 pub mut:
 	first_token_type  string
 	second_token_type string
 	operator          string
 }
 
-fn (err ErrorCantUseTokenOfTypeForOperaiton) output() string {
-	return 'Can\'t use ${err.operator} on type ${err.first_token_type} and ${err.second_token_type}'
+fn (err ErrorCantUseTokenOfTypeForOperation) output() string {
+	return 'cannot use ${cli_df.yellow}${err.operator}${cli_df.reset} operator between ${cli_df.cyan}${err.first_token_type}${cli_df.reset} and ${cli_df.cyan}${err.second_token_type}${cli_df.reset}'
 }
 
 pub struct ErrorCantFindExpectedToken {
@@ -147,13 +268,13 @@ pub mut:
 }
 
 fn (err ErrorCantFindExpectedToken) output() string {
-	return 'Was Expecting: ${err.token}'
+	return 'expected: ${cli_df.green}${err.token}${cli_df.reset}'
 }
 
 pub struct ErrorUseOfMultipleFloatPoints {}
 
 fn (err ErrorUseOfMultipleFloatPoints) output() string {
-	return 'Attempting the use of multiple floating points "." in number.'
+	return 'multiple decimal points in number literal'
 }
 
 pub struct ErrorOnlyAllowed {
@@ -162,13 +283,13 @@ pub mut:
 }
 
 fn (err ErrorOnlyAllowed) output() string {
-	return 'Only allowed ${err.value}'
+	return 'only ${err.value} is allowed here'
 }
 
 pub struct ErrorUnexpectedEOF {}
 
 fn (err ErrorUnexpectedEOF) output() string {
-	return 'Unexpected End of File'
+	return 'unexpected end of file'
 }
 
 pub struct ErrorNeededAfterInit {
@@ -178,7 +299,7 @@ pub mut:
 }
 
 fn (err ErrorNeededAfterInit) output() string {
-	return 'After initializing with "${err.init_token}" an ending token "${err.expected_token} is required."'
+	return 'missing ${cli_df.green}${err.expected_token}${cli_df.reset} after ${cli_df.yellow}${err.init_token}${cli_df.reset}'
 }
 
 pub struct ErrorCannotUseIndexKeyOn {
@@ -187,7 +308,7 @@ pub mut:
 }
 
 fn (err ErrorCannotUseIndexKeyOn) output() string {
-	return 'Can only use Indexed Key (["key"]) in type "Table" or "Array". Cannot use on ${err.name_of_var}'
+	return 'cannot use index on ${cli_df.yellow}${err.name_of_var}${cli_df.reset} (only table or array types support indexing)'
 }
 
 pub struct ErrorArrayOutOfRange {
@@ -198,44 +319,37 @@ pub mut:
 }
 
 fn (err ErrorArrayOutOfRange) output() string {
-	return 'Array out of range: total length of array "${err.name_of_var}" is: ${err.total_len} : trying to get index ${err.trying_to_get}'
+	return 'index out of range: ${cli_df.yellow}${err.name_of_var}${cli_df.reset} has length ${cli_df.cyan}${err.total_len}${cli_df.reset}, tried to access index ${cli_df.red}${err.trying_to_get}${cli_df.reset}'
 }
 
-pub struct ErrorCanAssignToIdenifiersArrayAndTablesOnly {
+pub struct ErrorCanAssignToIdentifiersArrayAndTablesOnly {}
+
+fn (err ErrorCanAssignToIdentifiersArrayAndTablesOnly) output() string {
+	return 'can only assign to identifiers, arrays, and tables'
 }
 
-fn (err ErrorCanAssignToIdenifiersArrayAndTablesOnly) output() string {
-	return 'Can assign values to "Identifers", "Arrays" and "Tables" only.'
-}
-
-pub struct ErrorHaveToUseKeyInTable {
-}
+pub struct ErrorHaveToUseKeyInTable {}
 
 fn (err ErrorHaveToUseKeyInTable) output() string {
-	return 'You have to use "Key" in "Array".'
+	return 'must use key in table initialization'
 }
 
-
-pub struct ErrorI64ToIntConvert {
-}
+pub struct ErrorI64ToIntConvert {}
 
 fn (err ErrorI64ToIntConvert) output() string {
-	return 'The value provided should be ${min_int} > and < ${max_int}'
+	return 'integer value out of range: must be between ${min_int} and ${max_int}'
 }
 
-
-pub struct ErrorCannotUseKeyInArray {
-}
+pub struct ErrorCannotUseKeyInArray {}
 
 fn (err ErrorCannotUseKeyInArray) output() string {
-	return 'You cannot use Key In Array.'
+	return 'cannot use string key in array (use numeric index instead)'
 }
 
-pub struct ErrorTableKeyCannotBeOtherThanLitreal {
-}
+pub struct ErrorTableKeyCannotBeOtherThanLiteral {}
 
-fn (err ErrorTableKeyCannotBeOtherThanLitreal) output() string {
-	return 'Key of Table ["key"=> "value"] can only be of type "number" or "string".'
+fn (err ErrorTableKeyCannotBeOtherThanLiteral) output() string {
+	return 'table key must be a string or number literal'
 }
 
 pub struct ErrorCannotUseTokenIfBefore {
@@ -245,7 +359,7 @@ pub mut:
 }
 
 fn (err ErrorCannotUseTokenIfBefore) output() string {
-	return 'Use of "${err.having}" is not allowed before "${err.token}"'
+	return 'cannot use ${cli_df.yellow}${err.having}${cli_df.reset} before ${cli_df.yellow}${err.token}${cli_df.reset}'
 }
 
 pub struct ErrorCanDeleteOnlyIdentifiers {
@@ -254,19 +368,19 @@ pub mut:
 }
 
 fn (err ErrorCanDeleteOnlyIdentifiers) output() string {
-	return 'By using "${err.del_key}" keyword you can only delete Identifiers'
+	return '${cli_df.yellow}${err.del_key}${cli_df.reset} can only delete identifiers'
 }
 
 pub struct ErrorUnexpected {}
 
 fn (err ErrorUnexpected) output() string {
-	return 'Unexpected Error In the compiler. Raise an Issue in Github'
+	return 'internal compiler error (please report this issue on GitHub)'
 }
 
 pub struct ErrorUnsupported {}
 
 fn (err ErrorUnsupported) output() string {
-	return 'Unsupported Litreal Found'
+	return 'unsupported operation'
 }
 
 pub struct ErrorEvalTypeMisMatch {
@@ -277,7 +391,7 @@ pub mut:
 }
 
 fn (err ErrorEvalTypeMisMatch) output() string {
-	return 'Trying to run operation "${err.op}" on left: ${err.left} and right: ${err.right}'
+	return 'type mismatch: cannot use ${cli_df.yellow}${err.op}${cli_df.reset} between ${cli_df.cyan}${err.left}${cli_df.reset} and ${cli_df.cyan}${err.right}${cli_df.reset}'
 }
 
 pub struct ErrorBinaryOperationUnsupported {
@@ -288,7 +402,7 @@ pub mut:
 }
 
 fn (err ErrorBinaryOperationUnsupported) output() string {
-	return 'Unsupported Bniary operation in literal "${err.type_of_value}", Found: ${err.found} Supported: ${err.supported}'
+	return 'unsupported operator ${cli_df.red}${err.found}${cli_df.reset} for type ${cli_df.cyan}${err.type_of_value}${cli_df.reset} (supported: ${err.supported.join(", ")})'
 }
 
 pub struct ErrorUsingElseIfAfterElse {
@@ -298,7 +412,7 @@ pub mut:
 }
 
 fn (err ErrorUsingElseIfAfterElse) output() string {
-	return 'Cannot use "${err.trying_to_use}" after the use of "${err.before_using}"'
+	return 'cannot use ${cli_df.yellow}${err.trying_to_use}${cli_df.reset} after ${cli_df.yellow}${err.before_using}${cli_df.reset}'
 }
 
 pub struct ErrorNoConditionsProvided {
@@ -307,13 +421,13 @@ pub mut:
 }
 
 fn (err ErrorNoConditionsProvided) output() string {
-	return 'No Conditions provided for ${err.token}.'
+	return 'missing condition for ${cli_df.yellow}${err.token}${cli_df.reset} statement'
 }
 
 pub struct ErrorDivisionByZero {}
 
 fn (err ErrorDivisionByZero) output() string {
-	return 'Division by Zero!'
+	return 'division by zero'
 }
 
 pub struct ErrorUnexpectedWhile {
@@ -322,7 +436,7 @@ pub mut:
 }
 
 fn (err ErrorUnexpectedWhile) output() string {
-	return 'Unexpected Error In the compiler while ${err.while_doing}. Raise an Issue in Github'
+	return 'internal error during ${err.while_doing} (please report this issue on GitHub)'
 }
 
 pub struct ErrorTryingToSetOnUndefined {
@@ -331,7 +445,7 @@ pub mut:
 }
 
 fn (err ErrorTryingToSetOnUndefined) output() string {
-	return 'Trying to set "${err.token}"" value on undefined'
+	return 'cannot set value on undefined variable ${cli_df.yellow}${err.token}${cli_df.reset}'
 }
 
 pub struct ErrorUndefinedToken {
@@ -340,7 +454,7 @@ pub mut:
 }
 
 fn (err ErrorUndefinedToken) output() string {
-	return 'undefined: ${err.token}'
+	return 'undefined: ${cli_df.yellow}${err.token}${cli_df.reset}'
 }
 
 pub struct ErrorUnexpectedTokenExpectedEitherOr {
@@ -351,7 +465,7 @@ pub mut:
 }
 
 fn (err ErrorUnexpectedTokenExpectedEitherOr) output() string {
-	return 'Unexpected value: found ${err.found}, expecting either "${err.either}" or "${err.or_token}"'
+	return 'expected ${cli_df.green}${err.either}${cli_df.reset} or ${cli_df.green}${err.or_token}${cli_df.reset}, found ${cli_df.red}${err.found}${cli_df.reset}'
 }
 
 pub struct ErrorTryingToUseReservedIdentifier {
@@ -360,7 +474,7 @@ pub mut:
 }
 
 fn (err ErrorTryingToUseReservedIdentifier) output() string {
-	return 'The "${err.identifier}" identifier is reserved by Danfe and user programs cannot assign value to to it.'
+	return '${cli_df.yellow}${err.identifier}${cli_df.reset} is a reserved keyword'
 }
 
 pub struct ErrorFunctionAlreadyDeclared {
@@ -369,7 +483,7 @@ pub mut:
 }
 
 fn (err ErrorFunctionAlreadyDeclared) output() string {
-	return 'You have already declared a function named "${err.function_name}"'
+	return 'function ${cli_df.yellow}${err.function_name}${cli_df.reset} is already declared'
 }
 
 pub struct ErrorMissingParenthesis {
@@ -378,7 +492,7 @@ pub mut:
 }
 
 fn (err ErrorMissingParenthesis) output() string {
-	return 'Unexpected Error In the compiler while ${err.missing_token}. Raise an Issue in Github'
+	return 'missing ${cli_df.green}${err.missing_token}${cli_df.reset}'
 }
 
 pub struct ErrorArgumentsMisMatch {
@@ -388,20 +502,15 @@ pub mut:
 	found_amount    string
 }
 
-fn (err ErrorArgumentsMisMatch) one_or_multiple(amount string) string {
-	if amount == '1' {
-		return '${amount} argument'
-	}
-	return '${amount} arguments'
-}
-
 fn (err ErrorArgumentsMisMatch) output() string {
-	return 'Arguments mismatch for function "${err.func_name}" \nwant: ${err.one_or_multiple(err.expected_amount)} \nhave: ${err.one_or_multiple(err.found_amount)}'
+	expected_word := if err.expected_amount == '1' { 'argument' } else { 'arguments' }
+	found_word := if err.found_amount == '1' { 'argument' } else { 'arguments' }
+	return 'function ${cli_df.yellow}${err.func_name}${cli_df.reset} expects ${cli_df.green}${err.expected_amount}${cli_df.reset} ${expected_word}, got ${cli_df.red}${err.found_amount}${cli_df.reset} ${found_word}'
 }
 
-// [Not an acutal Error] This Error is kept just to make it easier to end Parising
+// [Not an actual Error] Used to signal end of parsing
 pub struct ErrorExpectedEOF {}
 
 fn (err ErrorExpectedEOF) output() string {
-	return 'End of File'
+	return 'end of file'
 }

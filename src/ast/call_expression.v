@@ -389,7 +389,7 @@ fn (mut dtp DataTypeParser) parse_table() !EvalOutput {
 		ast_table.len++
 
 		match dtp.cur_token.token_type {
-			token.Seperator, token.EOL {
+			token.Separator, token.EOL {
 				dtp.next()!
 			}
 			token.Punctuation {}

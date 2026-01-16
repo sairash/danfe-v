@@ -1,4 +1,4 @@
-module grammer
+module grammar
 
 pub const reserved_symbols = {
 	'import':     ['prayog']
@@ -13,8 +13,6 @@ pub const reserved_symbols = {
 	'continue':   ['xod']
 	'return':     ['pathau']
 	'nil':        ['khali', 'null', 'sunna']
-	'v':          []
-	'endv':       []
 	'del':        ['hatau']
 	'__module__': []
 	// predefined functions
@@ -33,7 +31,5 @@ pub const reserved_symbols = {
 	'rand_str':   []
 	'rand_int':   []
 	'self':       ['aafu']
-	// 'not':      ['hoina']
-	// 'or':       ['ya']
-	// 'and':      ['ra']
 }
+

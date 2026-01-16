@@ -1,7 +1,7 @@
 module lexer
 
 import token
-import grammer
+import grammar
 import errors_df
 
 fn (l &Lex) map_balance(c u8) u8 {
@@ -87,17 +87,7 @@ fn (mut l Lex) match_number(start u8, start_index i64) !token.Token {
 				found:    "\"${peek.ascii_str()}\" of type identifer."
 			})
 		} else {
-			unsafe {
-				free(peek)
-			}
 			break
-		}
-	}
-
-	defer {
-		unsafe {
-			free(return_number)
-			free(return_hint)
 		}
 	}
 
@@ -141,13 +131,6 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 		l.consume_char()
 	}
 
-	defer {
-		unsafe {
-			free(return_operator)
-			free(peek)
-		}
-	}
-
 	return token.Token{
 		token_type: token.Operator{
 			value: return_operator
@@ -157,7 +140,7 @@ fn (mut l Lex) match_operators(start u8, start_index i64) !token.Token {
 }
 
 fn (l Lex) check_if_in_reserved_symbol(identifier string) string {
-	for key, value in grammer.reserved_symbols {
+	for key, value in grammar.reserved_symbols {
 		if identifier == key || identifier in value {
 			return key
 		}
@@ -182,42 +165,6 @@ fn (mut l Lex) match_reserved_symbols(identifier string, identifier_split []stri
 		l.skip_next_can_import = true
 	}
 
-	if ret_ident.reserved == 'v' {
-		l.skip_whitespace() or {
-			return l.error_generator('v block', errors_df.ErrorMismatch{'{', 'EOF'})
-		}
-
-		next_token := l.peek() or {
-			return l.error_generator('v block', errors_df.ErrorMismatch{
-				expected: '{'
-				found:    'EOF'
-			})
-		}
-
-		if next_token != `{` {
-			return l.error_generator('v block', errors_df.ErrorMismatch{
-				expected: '{'
-				found:    next_token.ascii_str()
-			})
-		}
-
-		curr_token_position := l.x
-		next_index := l.file_data.index_after('} endv', int(l.x)) or {
-			return l.error_generator('v block', errors_df.ErrorCantFindExpectedToken{
-				token: 'token "} end"'
-			})
-		}
-
-		value_v_block := l.file_data[curr_token_position + 1..next_index]
-
-		l.skip_till(next_index + 6)
-
-		return token.Token{
-			token_type: token.VBlock{value_v_block}
-			range:      [curr_token_position, next_index + 6]
-		}
-	}
-
 	return token.Token{
 		token_type: ret_ident
 		range:      []
@@ -235,9 +182,6 @@ fn (mut l Lex) match_string(start_symbol u8, start_index i64) !token.Token {
 		}
 
 		if new_char == start_symbol {
-			unsafe {
-				free(new_char)
-			}
 			break
 		} else if new_char == `\\` {
 			consume := l.consume_char() or {
@@ -312,9 +256,6 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 			return_str_sep = ''
 			l.consume_char()
 		} else {
-			unsafe {
-				free(peek)
-			}
 			break
 		}
 	}
@@ -323,7 +264,7 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 	modules_sep << return_str_sep
 
 	if check_string_has_reserved {
-		for key, value in grammer.reserved_symbols {
+		for key, value in grammar.reserved_symbols {
 			if key in modules_sep {
 				return l.error_generator('"." character', errors_df.ErrorTryingToUseReservedIdentifier{
 					identifier: key
@@ -339,13 +280,6 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 		}
 	}
 
-	defer {
-		unsafe {
-			free(return_str)
-			free(start_index)
-		}
-	}
-
 	if return_str[return_str.len - 1] == `.` {
 		return l.error_generator('match identifier', errors_df.ErrorDotCantBeEndOfIdent{
 			token: return_str
@@ -354,11 +288,5 @@ fn (mut l Lex) match_identifier(first_char u8, start_index i64) !token.Token {
 
 	mut new_token := l.match_reserved_symbols(return_str, modules_sep)!
 	new_token.range = [start_index, l.get_x()]
-	defer {
-		unsafe {
-			free(new_token)
-		}
-	}
-
 	return new_token
 }

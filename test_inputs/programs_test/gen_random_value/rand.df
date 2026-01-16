@@ -1,17 +1,15 @@
-# You can alias imports
+# Random string generator using native Danfe functions
 import "./v_op/some_v_code" as v_mods
-import "./v_op/v_time_func.df" as v_mods.time
 
 chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 total_chars = len(chars)
 
-
-# Very Slow 😞 method will get faster soon 💪
+# Generate random ASCII string using built-in rand_int
 function gen_random_ascii(length){
     result = ''
     i = 0
     for i <= length {
-        result = result + chars[int(v_mods.time.get_current_time_nano() % total_chars)]
+        result = result + chars[int(rand_int() % total_chars)]
         i = i + 1
     }
     return result

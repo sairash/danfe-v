@@ -4,6 +4,7 @@ import readline { read_line }
 import cli_df
 import parser
 import errors_df
+import ast
 
 pub struct Repl {
 mut:
@@ -89,7 +90,7 @@ pub fn (mut rp Repl) start() ! {
 			rp.data += input
 
 			for i := last_line_executed; i < pars_current_body.len; i += 1 {
-				pars_current_body[i].eval([empty_process]) or {
+				pars_current_body[i].eval([ast.get_empty_process()]) or {
 					println('')
 					println(err)
 				}

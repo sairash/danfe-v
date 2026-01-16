@@ -20,14 +20,25 @@ fn main() {
 		commands:    [
 			cli.Command{
 				name:          'run'
+				description:   'Run a Danfe program'
 				required_args: 1
+				usage:         '<file.df> [-t] [-a <output.txt>]'
 				execute:       fn (cmd cli.Command) ! {
-					for _, x in cmd.args {
-						if x != '-t' {
-							return interpreter('i', os.abs_path(parser.format_path(cmd.args[0])),
-								['main'], 'main', cmd.args)
+					file_path := os.abs_path(parser.format_path(cmd.args[0]))
+					
+					mut ast_output := ''
+					mut i := 1
+					for i < cmd.args.len {
+						arg := cmd.args[i]
+						if arg == '-a' && i + 1 < cmd.args.len {
+							ast_output = cmd.args[i + 1]
+							i += 2
+						} else {
+							i += 1
 						}
 					}
+					
+					return interpreter('i', file_path, ['main'], 'main', cmd.args, ast_output)
 				}
 			},
 		]
@@ -36,7 +47,7 @@ fn main() {
 	app.parse(os.args)
 }
 
-fn interpreter(parent_path string, child_path string, full_module_name []string, module_name string, args []string) ! {
+fn interpreter(parent_path string, child_path string, full_module_name []string, module_name string, args []string, ast_output string) ! {
 	joined_module := full_module_name.join('.')
 	ast.add_import(parent_path, child_path)!
 	ast.set_if_module_not_already_init(joined_module, module_name)
@@ -45,18 +56,21 @@ fn interpreter(parent_path string, child_path string, full_module_name []string,
 	mut pars := parser.Parse.new(child_path, full_module_name)!
 	pars.walk_main()!
 
-
+	if ast_output != '' && full_module_name == ['main'] {
+		parser.print_ast_to_file(pars.ast, ast_output)!
+		println('AST written to: ${ast_output}')
+	}
 
 	for i := 0; i < pars.ast.body.len; i += 1 {
 		cur := pars.ast.body[i]
 		match cur {
 			ast.ImportStatement {
-				mut perv_module_name := cur.from_module_.clone()
-				perv_module_name << cur.module_
-				interpreter(cur.from_path, cur.path, perv_module_name, cur.module_, args)!
+				mut prev_module_name := cur.from_module_.clone()
+				prev_module_name << cur.module_
+				interpreter(cur.from_path, cur.path, prev_module_name, cur.module_, args, '')!
 			}
 			else {
-				cur.eval([empty_process])!
+				cur.eval([ast.get_empty_process()])!
 			}
 		}
 	}
