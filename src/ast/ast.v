@@ -499,6 +499,45 @@ struct ProgramStateStore {
 	value EvalOutput
 }
 
+pub enum LiteralType {
+	integer
+	floating_point
+	str
+	boolean
+	null
+}
+
+pub struct Literal {
+pub mut:
+	hint  LiteralType
+	value string
+	from  []string @[required]
+}
+
+fn (li Literal) eval(process_id []&Process) !EvalOutput {
+	match li.hint {
+		.integer {
+			return EvalOutput(li.value.i64())
+		}
+		.floating_point {
+			return EvalOutput(strconv.atof64(li.value)!)
+		}
+		.str {
+			return replace_identifier_in_string(li.value, li.from, process_id)!
+		}
+		.boolean {
+			if li.value == 'true' {
+				return i64(1)
+			}
+			return i64(0)
+		}
+		.null {
+			return i64(0)
+		}
+	}
+	return error_gen('eval', 'litreal', errors_df.ErrorUnsupported{})
+}
+
 pub struct FunctionStore {
 pub mut:
 	parameters         []Identifier

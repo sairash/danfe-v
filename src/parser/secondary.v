@@ -148,9 +148,7 @@ fn (mut p Parse) parse_function() !ast.Node {
 
 	p.scope = ret_func.prev_scope
 
-	ret_func.eval([p.scope])!
-
-	return ast.FunctionDeclared{}
+	return ret_func
 }
 
 pub fn resolve_absolute_path(base_path string, relative_path_old string) string {

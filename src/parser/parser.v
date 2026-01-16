@@ -1,5 +1,9 @@
 module parser
 
+import math
+import strconv
+import strings
+
 import lexer
 import token
 import ast
@@ -95,6 +99,83 @@ fn (p &Parse) check_next_with_name_token(expected token.Token) bool {
 	return p.nxt_token.get_name() == expected.get_name()
 }
 
+fn try_binary_folding(left ast.Node, right ast.Node, op string, module_ []string) ?ast.Node {
+	left_lit := match left {
+		ast.Litreal {left}
+		else {return none}
+	}
+
+	right_lit := match right {
+		ast.Litreal {right}
+		else {return none}
+	}
+
+	if left_lit.hint == .str && right_lit.hint == .str {
+		if op == "+" {
+			return ast.Literal {
+				hint: .str
+				value: '${left_lit.value}${right_lit.value}'
+				from: module_
+			}
+		}
+
+		return none
+	}
+
+
+	if left_lit.hint == .str && (right_lit.hint == .integer || right_lit.hint == .floating_point){
+		r := right_lit.value.int()
+		if op == "*" {
+			return ast.Literal {
+				hint: .str
+				value: strings.repeat_string(left_lit.value, r)
+				from: module_
+			}
+		}
+		return none
+	}
+
+	if left_lit.hint == .floating_point || right_lit.hint == .floating_point {
+		l := strconv.atof64(left_lit.value) or { return none }
+		r := strconv.atof64(right_lit.value) or { return none }
+
+		result := match op {
+			'+' { l + r }
+			'-' { l - r }
+			'*' { l * r }
+			'/' { if r != 0.0 { l / r } else { return none } }
+			'^' { math.pow(l, r) }
+			'%' { math.fmod(l, r) }
+			else { return none }
+		}
+		
+		return ast.Literal{
+			hint:  .floating_point
+			value: '${result}'
+			from:  module_
+		}
+	} else {
+		l := left_lit.value.i64()
+		r := right_lit.value.i64()
+		
+		result := match op {
+			'+' { l + r }
+			'-' { l - r }
+			'*' { l * r }
+			'/' { if r != 0 { l / r } else { return none } }
+			'^' { i64(math.powi(l, r)) }
+			'%' { if r != 0 { l % r } else { return none } }
+			else { return none }
+		}
+		
+		return ast.Literal{
+			hint:  .integer
+			value: '${result}'
+			from:  module_
+		}
+	}
+}
+
 fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 	mut left := p.parse_factor()!
 	for {
@@ -145,10 +226,14 @@ fn (mut p Parse) parse_bin_logical_expression(precedence int) !ast.Node {
 						break
 					}
 					else {
-						left = ast.Binary{
-							operator: x.value
-							left:     left
-							right:    right
+						if folded := try_binary_folding(left, right, x.value, p.module_) {
+							left = folded
+						} else {
+							left = ast.Binary{
+								operator: x.value
+								left:     left
+								right:    right
+							}
 						}
 					}
 				}
